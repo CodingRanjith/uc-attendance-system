@@ -29,7 +29,7 @@ function Attendance() {
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) {
-      navigate('/login');
+      navigate('/');
       return;
     }
 
@@ -50,7 +50,7 @@ function Attendance() {
 
     const fetchMyAttendance = async () => {
       try {
-        const res = await axios.get(API_ENDPOINTS.getAllAttendance, {
+        const res = await axios.get(API_ENDPOINTS.getAttendanceAll, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const filtered = res.data.filter(r => r.user?._id === decoded.userId);
