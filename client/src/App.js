@@ -6,7 +6,6 @@ import Register from './components/Register';
 import Dashboard from './pages/Dashboard';
 import Attendance from './components/Attendance';
 import EditUser from './components/EditUser';
-import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './components/AuthContext';
 function App() {
   return (

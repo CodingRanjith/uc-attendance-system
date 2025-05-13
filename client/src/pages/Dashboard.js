@@ -7,11 +7,9 @@ import jobzenterLogo from '../assets/jzlogo.png';
 import {FiMail, FiPhone, FiChevronLeft } from 'react-icons/fi';
 import {
   FiUserPlus,
-  FiClock,
   FiMapPin,
   FiCheckCircle,
   FiXCircle,
-  FiFilter,
   FiCalendar,
   FiUser,
   FiSearch,
@@ -19,7 +17,6 @@ import {
   FiHome,
   FiUsers,
   FiCheckSquare,
-  FiBarChart2,
   FiImage,
   FiMenu,
   FiChevronRight,
@@ -59,11 +56,6 @@ const Dashboard = () => {
             headers: { Authorization: `Bearer ${token}` }
           })
         ]);
-
-        let result = attendanceData;
-        if (companyFilter !== 'all') {
-         result = result.filter(record => record.user?.company === companyFilter);
-        }
 
         
         setAttendanceData(attendanceRes.data);
