@@ -1,5 +1,5 @@
 // src/utils/api.js
-export const BASE_URL = 'http://localhost:5000';
+export const BASE_URL = 'https://uc-attendance-system.onrender.com';
 
 export const API_ENDPOINTS = {
   attendance: `${BASE_URL}/attendance/all`,
