@@ -113,9 +113,14 @@ function Login() {
                 <input type="checkbox" className="h-4 w-4 mr-2 text-white bg-opacity-20 border-white border-opacity-20 rounded" />
                 Remember me
               </label>
-              <a href="#" className="text-sm font-medium text-white text-opacity-90 hover:text-opacity-100">
-                Forgot password?
-              </a>
+              <button
+  type="button"
+  onClick={() => alert('Forgot password clicked')} // or navigate to a reset page
+  className="text-sm font-medium text-white text-opacity-90 hover:text-opacity-100 underline"
+>
+  Forgot password?
+</button>
+
             </div>
 
             <button
