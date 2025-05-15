@@ -65,7 +65,8 @@ function Attendance() {
           videoRef.current.srcObject = stream;
         }
       } catch (err) {
-        setError('Camera error. Check permission.');
+        console.error('Camera error:', err);
+        setError('Camera access denied or not available.');
       }
     };
 
@@ -113,7 +114,7 @@ function Attendance() {
     canvas.height = videoRef.current.videoHeight;
     const ctx = canvas.getContext('2d');
     ctx.translate(canvas.width, 0);
-    ctx.scale(-1, 1); // Mirror
+    ctx.scale(-1, 1);
     ctx.drawImage(videoRef.current, 0, 0);
     canvas.toBlob(async blob => {
       const file = new File([blob], 'attendance.jpg', { type: 'image/jpeg' });
@@ -172,7 +173,7 @@ function Attendance() {
 
   const logout = () => {
     localStorage.removeItem('token');
-    navigate('/login');
+    navigate('/');
   };
 
   return (
@@ -217,8 +218,18 @@ function Attendance() {
             <div className="mb-4">
               {image ? (
                 <img src={URL.createObjectURL(image)} alt="Captured" className="rounded mb-2" />
+              ) : error ? (
+                <div className="bg-red-100 text-red-600 p-3 rounded mb-2 text-sm">{error}</div>
               ) : (
-                <video ref={videoRef} autoPlay playsInline muted className="w-full rounded mb-2 transform scale-x-[-1]" />
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  width="100%"
+                  height="240"
+                  className="rounded mb-2 transform scale-x-[-1] bg-black"
+                />
               )}
               <div className="flex justify-center space-x-3">
                 {!image ? (
@@ -274,7 +285,7 @@ function Attendance() {
         )}
       </div>
 
-      {/* Attendance History Table */}
+      {/* Attendance History */}
       {myAttendance.length > 0 && (
         <div className="mt-8 w-full max-w-4xl">
           <h3 className="text-lg font-semibold text-gray-800 mb-2">My Attendance Records</h3>

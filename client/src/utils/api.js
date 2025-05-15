@@ -1,18 +1,25 @@
 // src/utils/api.js
 export const BASE_URL = 'https://uc-attendance-system.onrender.com';
 
+// export const BASE_URL = 'http://localhost:5000';
+
 export const API_ENDPOINTS = {
-  postAttendance: `${BASE_URL}/attendance`,
-  getLastAttendance: `${BASE_URL}/attendance/last`,
+  attendance: `${BASE_URL}/attendance/all`,
+  users: `${BASE_URL}/users`,
+  login: `${BASE_URL}/auth/login`,
+  register: `${BASE_URL}/auth/register`,
   getAttendanceAll: `${BASE_URL}/attendance/all`,
   getUsers: `${BASE_URL}/users`,
   getAttendanceByDate: (date) => `${BASE_URL}/admin/attendance?date=${date}`,
+  getLastAttendance: `${BASE_URL}/attendance/last`,
+  login: `${BASE_URL}/login`,
+  authLogin: `${BASE_URL}/api/auth/login`,
+  register: `${BASE_URL}/register`,
   uploadPath: `${BASE_URL}/uploads`,
-
-  // Clearly named auth endpoints
-  login: `${BASE_URL}/auth/login`,
-  register: `${BASE_URL}/auth/register`,
+  postAttendance: `${BASE_URL}/attendance`,
+  // add more as needed
 };
+
 
 
 export const getAttendanceAll = async () => {
