@@ -36,7 +36,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 
-const allowedOrigins = ['http://localhost:3000', 'https://ujattendance.netlify.app'];
+const allowedOrigins = ['http://localhost:3000', 'https://ujattendance.netlify.app', 'https://6825891884b868fc93a89ff7--rococo-selkie-2b4fcf.netlify.app'];
 
 app.use(cors({
   origin: (origin, callback) => {
