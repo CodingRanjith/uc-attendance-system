@@ -6,8 +6,6 @@ export const BASE_URL = 'https://uc-attendance-system.onrender.com';
 export const API_ENDPOINTS = {
   attendance: `${BASE_URL}/attendance/all`,
   users: `${BASE_URL}/users`,
-  login: `${BASE_URL}/auth/login`,
-  register: `${BASE_URL}/auth/register`,
   getAttendanceAll: `${BASE_URL}/attendance/all`,
   getUsers: `${BASE_URL}/users`,
   getAttendanceByDate: (date) => `${BASE_URL}/admin/attendance?date=${date}`,
