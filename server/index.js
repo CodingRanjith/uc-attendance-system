@@ -36,20 +36,8 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 
-const allowedOrigins = [
-  'https://attendance.jobzenter.in', 
-];
+app.use(cors({ origin: '*' }));
 
-app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true
-}));
 
 
 
