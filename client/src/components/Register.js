@@ -89,7 +89,7 @@ function Register() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-xl p-10 border border-gray-200 animate-fade-in">
         <div className="text-center mb-10">
-          <h2 className="text-4xl font-bold text-blue-800">🚀 User Registration</h2>
+          <h2 className="text-4xl font-bold text-blue-800">Employee Registration</h2>
           <p className="text-gray-600 mt-2">
             Fill in the details to create a user with a weekly schedule
           </p>

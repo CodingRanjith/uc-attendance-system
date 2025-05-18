@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { jwtDecode } from 'jwt-decode';
 import {
-  FiCheckCircle, FiClock, FiMapPin, FiLogOut
+  FiCamera, FiCheckCircle, FiClock, FiMapPin, FiRefreshCw, FiUser
 } from 'react-icons/fi';
+import { jwtDecode } from 'jwt-decode';
 import { API_ENDPOINTS } from '../utils/api';
 
 function Attendance() {
@@ -14,70 +14,64 @@ function Attendance() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [showAttendanceForm, setShowAttendanceForm] = useState(false);
+  const [isCapturing, setIsCapturing] = useState(false);
   const [userName, setUserName] = useState('');
-  const [userId, setUserId] = useState('');
-  const [myAttendance, setMyAttendance] = useState([]);
-
-  const navigate = useNavigate();
+  const [attendanceHistory, setAttendanceHistory] = useState([]);
+  const [showAttendanceModal, setShowAttendanceModal] = useState(false);
   const videoRef = useRef(null);
   const streamRef = useRef(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (!token) {
-      navigate('/');
-      return;
+    if (token) {
+      const decoded = jwtDecode(token);
+      setUserName(decoded.name || 'User');
     }
 
-    const decoded = jwtDecode(token);
-    setUserName(decoded.name);
-    setUserId(decoded.userId);
-
-    const fetchLastAttendance = async () => {
+    const fetchData = async () => {
       try {
         const res = await axios.get(API_ENDPOINTS.getLastAttendance, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
         });
+
         setType(res.data.type === 'check-in' ? 'check-out' : 'check-in');
+
+        const myAttendance = await axios.get(API_ENDPOINTS.getMyAttendance, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        setAttendanceHistory(myAttendance.data.slice(0, 5));
       } catch (err) {
-        console.error('Error fetching last attendance:', err);
+        console.error('Error fetching user attendance:', err);
       }
     };
 
-    const fetchMyAttendance = async () => {
-      try {
-        const res = await axios.get(API_ENDPOINTS.getAttendanceAll, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const filtered = res.data.filter(r => r.user?._id === decoded.userId);
-        setMyAttendance(filtered);
-      } catch (err) {
-        console.error('Error fetching attendance:', err);
-      }
-    };
+    fetchData();
 
     const startCamera = async () => {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        setIsCapturing(true);
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'user' }
+        });
         streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
+        if (videoRef.current) videoRef.current.srcObject = stream;
       } catch (err) {
         console.error('Camera error:', err);
-        setError('Camera access denied or not available.');
+        setError('Could not access camera. Please check permissions.');
+        setIsCapturing(false);
       }
     };
 
-    fetchLastAttendance();
-    fetchMyAttendance();
     startCamera();
 
     return () => {
-      if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
     };
-  }, [navigate]);
+  }, []);
 
   const compressImage = async (file, maxSizeKB = 40) => {
     return new Promise(resolve => {
@@ -87,19 +81,36 @@ function Attendance() {
         img.onload = () => {
           const canvas = document.createElement('canvas');
           const ctx = canvas.getContext('2d');
+
           let width = img.width, height = img.height;
           const MAX_WIDTH = 800, MAX_HEIGHT = 600;
+
           if (width > height && width > MAX_WIDTH) {
-            height *= MAX_WIDTH / width; width = MAX_WIDTH;
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
           } else if (height > MAX_HEIGHT) {
-            width *= MAX_HEIGHT / height; height = MAX_HEIGHT;
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
           }
+
           canvas.width = width;
           canvas.height = height;
           ctx.drawImage(img, 0, 0, width, height);
-          canvas.toBlob(blob => {
-            resolve(new File([blob], file.name, { type: 'image/jpeg' }));
-          }, 'image/jpeg');
+
+          let quality = 0.9;
+          const checkSize = () => {
+            canvas.toBlob(blob => {
+              if (!blob) return resolve(null);
+              const sizeKB = blob.size / 1024;
+              if (sizeKB <= maxSizeKB || quality <= 0.1) {
+                resolve(new File([blob], file.name, { type: 'image/jpeg' }));
+              } else {
+                quality -= 0.1;
+                canvas.toBlob(checkSize, 'image/jpeg', quality);
+              }
+            }, 'image/jpeg', quality);
+          };
+          checkSize();
         };
         img.src = event.target.result;
       };
@@ -108,19 +119,26 @@ function Attendance() {
   };
 
   const captureImage = async () => {
-    if (!videoRef.current) return;
-    const canvas = document.createElement('canvas');
-    canvas.width = videoRef.current.videoWidth;
-    canvas.height = videoRef.current.videoHeight;
-    const ctx = canvas.getContext('2d');
-    ctx.translate(canvas.width, 0);
-    ctx.scale(-1, 1);
-    ctx.drawImage(videoRef.current, 0, 0);
-    canvas.toBlob(async blob => {
-      const file = new File([blob], 'attendance.jpg', { type: 'image/jpeg' });
-      const compressed = await compressImage(file);
-      setImage(compressed);
-    }, 'image/jpeg');
+    try {
+      if (!videoRef.current) return;
+      const canvas = document.createElement('canvas');
+      canvas.width = videoRef.current.videoWidth;
+      canvas.height = videoRef.current.videoHeight;
+      canvas.getContext('2d').drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+
+      canvas.toBlob(async blob => {
+        const file = new File([blob], 'attendance.jpg', { type: 'image/jpeg' });
+        const compressed = await compressImage(file);
+        compressed ? setImage(compressed) : setError('Failed to compress image');
+      }, 'image/jpeg', 0.9);
+    } catch (err) {
+      setError('Error capturing image.');
+    }
+  };
+
+  const retakePhoto = () => {
+    setImage(null);
+    setLocation('');
   };
 
   const handleSubmit = async (e) => {
@@ -130,12 +148,19 @@ function Attendance() {
     setSuccess('');
 
     if (!image) {
-      setError('Capture image first.');
+      setError('Please capture an image.');
       setIsLoading(false);
       return;
     }
 
-    navigator.geolocation.getCurrentPosition(async pos => {
+    const imageSizeKB = image.size / 1024;
+    if (imageSizeKB > 40) {
+      setError('Image too large.');
+      setIsLoading(false);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(async (pos) => {
       const coords = `${pos.coords.latitude},${pos.coords.longitude}`;
       setLocation(coords);
 
@@ -148,179 +173,154 @@ function Attendance() {
         await axios.post(API_ENDPOINTS.postAttendance, formData, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'multipart/form-data',
+            'Content-Type': 'multipart/form-data'
           }
         });
-        setSuccess(`${type === 'check-in' ? 'Checked in' : 'Checked out'} successfully!`);
+
+        setSuccess(`${type} successful`);
         setImage(null);
         setLocation('');
-        setShowAttendanceForm(false);
 
-        const updated = await axios.get(API_ENDPOINTS.getAttendanceAll, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        const myAttendance = await axios.get(API_ENDPOINTS.getMyAttendance, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          }
         });
-        setMyAttendance(updated.data.filter(r => r.user?._id === userId));
+        setAttendanceHistory(myAttendance.data.slice(0, 5));
       } catch (err) {
-        setError(err.response?.data?.message || 'Submit error');
+        setError('Failed to submit attendance');
       } finally {
         setIsLoading(false);
       }
     }, () => {
-      setError('Enable location access');
+      setError('Unable to access location.');
       setIsLoading(false);
     });
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    navigate('/');
-  };
-
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4 flex flex-col items-center">
-      {/* Logout */}
-      <div className="w-full max-w-md flex justify-between items-center mb-4">
-        <p className="text-sm text-gray-600">Welcome, {userName}</p>
-        <button onClick={logout} className="text-sm text-red-600 hover:text-red-700 flex items-center">
-          <FiLogOut className="mr-1" /> Logout
-        </button>
-      </div>
+    <div className="min-h-screen bg-gradient-to-tr from-purple-200 via-pink-100 to-blue-200 flex items-center justify-center p-4">
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl transition hover:scale-105 hover:shadow-[0_20px_40px_rgba(0,0,0,0.2)] border border-blue-100">
+        <div className="p-6">
 
-      {/* Attendance Form */}
-      <div className="w-full max-w-md bg-white rounded-xl shadow-md p-6">
-        {!showAttendanceForm ? (
-          <>
-            <h2 className="text-xl font-semibold text-center mb-6 text-gray-800">Mark Your Attendance</h2>
-            <div className="flex justify-around">
-              <button
-                onClick={() => { setType('check-in'); setShowAttendanceForm(true); }}
-                className="w-24 h-24 bg-green-500 hover:bg-green-600 text-white rounded-full shadow-lg flex items-center justify-center"
-              >
-                Check In
-              </button>
-              <button
-                onClick={() => { setType('check-out'); setShowAttendanceForm(true); }}
-                className="w-24 h-24 bg-red-500 hover:bg-red-600 text-white rounded-full shadow-lg flex items-center justify-center"
-              >
-                Check Out
-              </button>
-            </div>
-          </>
-        ) : (
-          <>
-            <h2 className="text-2xl font-bold text-center mb-4 text-gray-800">
-              {type === 'check-in' ? 'Check In' : 'Check Out'}
-            </h2>
+          <div className="flex justify-end mb-2">
+            <button
+              onClick={() => navigate(-1)}
+              className="text-sm text-blue-600 hover:text-blue-800 underline"
+            >
+              ← Back
+            </button>
+          </div>
 
-            {error && <div className="text-red-600 text-sm mb-2">{error}</div>}
-            {success && <div className="text-green-600 text-sm mb-2">{success}</div>}
+          <div className="text-center mb-6">
+            <h2 className="text-2xl font-bold">{type === 'check-in' ? 'Check In' : 'Check Out'}</h2>
+            <p className="text-gray-600">{type === 'check-in' ? 'Start your work day' : 'End your work day'}</p>
+            {userName && <div className="mt-2 flex justify-center items-center text-gray-700"><FiUser className="mr-1" />{userName}</div>}
+          </div>
 
-            <div className="mb-4">
-              {image ? (
-                <img src={URL.createObjectURL(image)} alt="Captured" className="rounded mb-2" />
-              ) : error ? (
-                <div className="bg-red-100 text-red-600 p-3 rounded mb-2 text-sm">{error}</div>
-              ) : (
+          {error && <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">{error}</div>}
+          {success && <div className="mb-4 p-3 bg-green-100 text-green-700 rounded">{success}</div>}
+
+          <div className="mb-4">
+            <div className="flex items-center text-sm text-gray-600 mb-2"><FiMapPin className="mr-2" />{location || 'Location will be shown after capture'}</div>
+            <div className="flex items-center text-sm text-gray-600"><FiClock className="mr-2" />{new Date().toLocaleString()}</div>
+          </div>
+
+          <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 mb-4">
+            {image ? (
+              <div className="relative">
+                <img src={URL.createObjectURL(image)} alt="Captured" className="w-full rounded-lg" />
+                <button
+                  onClick={retakePhoto}
+                  className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
+                >
+                  <FiRefreshCw />
+                </button>
+              </div>
+            ) : isCapturing ? (
+              <div className="relative">
                 <video
                   ref={videoRef}
                   autoPlay
                   playsInline
                   muted
-                  width="100%"
-                  height="240"
-                  className="rounded mb-2 transform scale-x-[-1] bg-black"
+                  className="w-full rounded-lg transform scale-x-[-1]"
                 />
-              )}
-              <div className="flex justify-center space-x-3">
-                {!image ? (
-                  <button onClick={captureImage} className="text-sm bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-                    Capture
+                <div className="absolute bottom-4 left-0 right-0 flex justify-center">
+                  <button onClick={captureImage} className="bg-white rounded-full p-3 shadow hover:bg-gray-100">
+                    <FiCamera className="text-gray-700 text-xl" />
                   </button>
-                ) : (
-                  <button onClick={() => setImage(null)} className="text-sm text-gray-600 hover:underline">Retake</button>
-                )}
+                </div>
+              </div>
+            ) : (
+              <div className="h-48 bg-gray-100 rounded-lg flex items-center justify-center text-gray-500">
+                Camera not available
+              </div>
+            )}
+          </div>
+
+          <form onSubmit={handleSubmit}>
+            <select
+              value={type}
+              onChange={(e) => setType(e.target.value)}
+              className="w-full mb-4 px-3 py-2 border rounded shadow focus:ring"
+            >
+              <option value="check-in">Check In</option>
+              <option value="check-out">Check Out</option>
+            </select>
+
+            <button
+              type="submit"
+              disabled={!image || isLoading}
+              className={`w-full py-3 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition ${(!image || isLoading) ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              {isLoading ? 'Processing...' : <><FiCheckCircle className="inline-block mr-1" /> {type === 'check-in' ? 'Check In' : 'Check Out'}</>}
+            </button>
+          </form>
+
+          <button
+            onClick={() => setShowAttendanceModal(true)}
+            className="mt-4 w-full py-3 rounded-full bg-yellow-500 text-white font-semibold shadow hover:shadow-md hover:bg-yellow-600 transition"
+          >
+            📋 View Attendance
+          </button>
+
+          {/* Fullscreen Modal */}
+          {showAttendanceModal && (
+            <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center">
+              <div className="w-full h-full bg-white overflow-auto p-6 relative rounded-lg shadow-lg">
+                <button
+                  onClick={() => setShowAttendanceModal(false)}
+                  className="absolute top-4 right-4 text-gray-700 hover:text-red-600 text-xl"
+                >
+                  &times;
+                </button>
+                <h2 className="text-2xl font-bold mb-4 text-center">📅 Recent Attendance</h2>
+                <table className="min-w-full text-sm bg-white border border-gray-200 rounded">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="px-4 py-2 text-left">Date</th>
+                      <th className="px-4 py-2 text-left">Time</th>
+                      <th className="px-4 py-2 text-left">Type</th>
+                      <th className="px-4 py-2 text-left">Location</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {attendanceHistory.map((a, idx) => (
+                      <tr key={idx} className="border-t">
+                        <td className="px-4 py-2">{new Date(a.timestamp).toLocaleDateString()}</td>
+                        <td className="px-4 py-2">{new Date(a.timestamp).toLocaleTimeString()}</td>
+                        <td className="px-4 py-2 capitalize">{a.type}</td>
+                        <td className="px-4 py-2">{a.location}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
-
-            <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-                <div className="flex items-center text-sm text-gray-600">
-                  <FiMapPin className="mr-1 text-gray-500" />
-                  {location || 'Will appear after capture'}
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
-                <div className="flex items-center text-sm text-gray-600">
-                  <FiClock className="mr-1 text-gray-500" />
-                  {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={!image || isLoading}
-                className={`w-full flex items-center justify-center py-2 px-4 rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 ${
-                  (!image || isLoading) ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
-              >
-                {isLoading ? (
-                  <>
-                    <svg className="animate-spin mr-2 h-5 w-5 text-white" viewBox="0 0 24 24" fill="none">
-                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" opacity="0.25" />
-                      <path fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" opacity="0.75" />
-                    </svg>
-                    Submitting...
-                  </>
-                ) : (
-                  <>
-                    <FiCheckCircle className="mr-2" />
-                    {type === 'check-in' ? 'Submit Check-In' : 'Submit Check-Out'}
-                  </>
-                )}
-              </button>
-            </form>
-          </>
-        )}
-      </div>
-
-      {/* Attendance History */}
-      {myAttendance.length > 0 && (
-        <div className="mt-8 w-full max-w-4xl">
-          <h3 className="text-lg font-semibold text-gray-800 mb-2">My Attendance Records</h3>
-          <div className="overflow-auto border rounded-lg">
-            <table className="min-w-full text-sm text-left text-gray-600">
-              <thead className="bg-gray-50 text-gray-700 uppercase text-xs">
-                <tr>
-                  <th className="px-4 py-2">Date</th>
-                  <th className="px-4 py-2">Type</th>
-                  <th className="px-4 py-2">Time</th>
-                  <th className="px-4 py-2">Location</th>
-                  <th className="px-4 py-2">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {myAttendance.slice().reverse().map((record, idx) => (
-                  <tr key={idx} className="border-t hover:bg-gray-50">
-                    <td className="px-4 py-2">{new Date(record.timestamp).toLocaleDateString()}</td>
-                    <td className="px-4 py-2 capitalize">{record.type}</td>
-                    <td className="px-4 py-2">{new Date(record.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
-                    <td className="px-4 py-2">{record.location || 'N/A'}</td>
-                    <td className="px-4 py-2">
-                      {record.isInOffice ? (
-                        <span className="text-blue-700 bg-blue-100 px-2 py-1 rounded-full text-xs">In Office</span>
-                      ) : (
-                        <span className="text-yellow-800 bg-yellow-100 px-2 py-1 rounded-full text-xs">Remote</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

@@ -164,7 +164,7 @@ app.post('/attendance', authMiddleware, upload.single('image'), async (req, res)
   res.json({ message: 'Attendance marked' });
 });
 
-app.get('/attendance/all', authMiddleware, roleMiddleware('admin'), async (req, res) => {
+app.get('/attendance/all', authMiddleware, roleMiddleware('admin', 'user'), async (req, res) => {
   try {
     const records = await Attendance.find().populate('user', 'name email');
     res.json(records);
