@@ -6,14 +6,13 @@ import {
 } from 'react-icons/fi';
 import { jwtDecode } from 'jwt-decode';
 import { API_ENDPOINTS } from '../utils/api';
+import Swal from 'sweetalert2';
 
 function Attendance() {
   const [location, setLocation] = useState('');
   const [image, setImage] = useState(null);
   const [type, setType] = useState('check-in');
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [isCapturing, setIsCapturing] = useState(false);
   const [userName, setUserName] = useState('');
   const [attendanceHistory, setAttendanceHistory] = useState([]);
@@ -43,7 +42,11 @@ function Attendance() {
 
         setAttendanceHistory(myAttendance.data.slice(0, 5));
       } catch (err) {
-        console.error('Error fetching user attendance:', err);
+        Swal.fire({
+          icon: 'error',
+          title: 'Fetch Error',
+          text: 'Could not load your attendance data.'
+        });
       }
     };
 
@@ -58,8 +61,11 @@ function Attendance() {
         streamRef.current = stream;
         if (videoRef.current) videoRef.current.srcObject = stream;
       } catch (err) {
-        console.error('Camera error:', err);
-        setError('Could not access camera. Please check permissions.');
+        Swal.fire({
+          icon: 'error',
+          title: 'Camera Access Denied',
+          text: 'Please enable your camera and refresh the page.'
+        });
         setIsCapturing(false);
       }
     };
@@ -72,7 +78,6 @@ function Attendance() {
       }
     };
   }, []);
-
   const compressImage = async (file, maxSizeKB = 40) => {
     return new Promise(resolve => {
       const reader = new FileReader();
@@ -129,10 +134,10 @@ function Attendance() {
       canvas.toBlob(async blob => {
         const file = new File([blob], 'attendance.jpg', { type: 'image/jpeg' });
         const compressed = await compressImage(file);
-        compressed ? setImage(compressed) : setError('Failed to compress image');
+        compressed ? setImage(compressed) : Swal.fire({ icon: 'error', title: 'Compression Failed' });
       }, 'image/jpeg', 0.9);
-    } catch (err) {
-      setError('Error capturing image.');
+    } catch {
+      Swal.fire({ icon: 'error', title: 'Image Capture Failed' });
     }
   };
 
@@ -144,18 +149,16 @@ function Attendance() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-    setError('');
-    setSuccess('');
 
     if (!image) {
-      setError('Please capture an image.');
+      Swal.fire({ icon: 'error', title: 'No Image', text: 'Please capture an image before submitting.' });
       setIsLoading(false);
       return;
     }
 
     const imageSizeKB = image.size / 1024;
     if (imageSizeKB > 40) {
-      setError('Image too large.');
+      Swal.fire({ icon: 'error', title: 'Image Too Large', text: 'Please retake image under 40KB.' });
       setIsLoading(false);
       return;
     }
@@ -177,7 +180,16 @@ function Attendance() {
           }
         });
 
-        setSuccess(`${type} successful`);
+        Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'success',
+          title: `${type === 'check-in' ? 'Checked in' : 'Checked out'} successfully!`,
+          showConfirmButton: false,
+          timer: 2000,
+          timerProgressBar: true
+        });
+
         setImage(null);
         setLocation('');
 
@@ -187,142 +199,160 @@ function Attendance() {
           }
         });
         setAttendanceHistory(myAttendance.data.slice(0, 5));
-      } catch (err) {
-        setError('Failed to submit attendance');
+
+      } catch {
+        Swal.fire({ icon: 'error', title: 'Failed to Submit' });
       } finally {
         setIsLoading(false);
       }
     }, () => {
-      setError('Unable to access location.');
+      Swal.fire({ icon: 'error', title: 'Location Error', text: 'Please enable GPS to proceed.' });
       setIsLoading(false);
     });
   };
 
+  // ⬇️ Include your JSX below or reattach from previous code
+
   return (
-    <div className="min-h-screen bg-gradient-to-tr from-purple-200 via-pink-100 to-blue-200 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl transition hover:scale-105 hover:shadow-[0_20px_40px_rgba(0,0,0,0.2)] border border-blue-100">
-        <div className="p-6">
+  <div className="min-h-screen bg-gradient-to-tr from-purple-200 via-pink-100 to-blue-200 flex items-center justify-center p-4">
+    <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl transition hover:scale-105 hover:shadow-[0_20px_40px_rgba(0,0,0,0.2)] border border-blue-100">
+      <div className="p-6">
 
-          <div className="flex justify-end mb-2">
-            <button
-              onClick={() => navigate(-1)}
-              className="text-sm text-blue-600 hover:text-blue-800 underline"
-            >
-              ← Back
-            </button>
-          </div>
-
-          <div className="text-center mb-6">
-            <h2 className="text-2xl font-bold">{type === 'check-in' ? 'Check In' : 'Check Out'}</h2>
-            <p className="text-gray-600">{type === 'check-in' ? 'Start your work day' : 'End your work day'}</p>
-            {userName && <div className="mt-2 flex justify-center items-center text-gray-700"><FiUser className="mr-1" />{userName}</div>}
-          </div>
-
-          {error && <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">{error}</div>}
-          {success && <div className="mb-4 p-3 bg-green-100 text-green-700 rounded">{success}</div>}
-
-          <div className="mb-4">
-            <div className="flex items-center text-sm text-gray-600 mb-2"><FiMapPin className="mr-2" />{location || 'Location will be shown after capture'}</div>
-            <div className="flex items-center text-sm text-gray-600"><FiClock className="mr-2" />{new Date().toLocaleString()}</div>
-          </div>
-
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 mb-4">
-            {image ? (
-              <div className="relative">
-                <img src={URL.createObjectURL(image)} alt="Captured" className="w-full rounded-lg" />
-                <button
-                  onClick={retakePhoto}
-                  className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
-                >
-                  <FiRefreshCw />
-                </button>
-              </div>
-            ) : isCapturing ? (
-              <div className="relative">
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className="w-full rounded-lg transform scale-x-[-1]"
-                />
-                <div className="absolute bottom-4 left-0 right-0 flex justify-center">
-                  <button onClick={captureImage} className="bg-white rounded-full p-3 shadow hover:bg-gray-100">
-                    <FiCamera className="text-gray-700 text-xl" />
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="h-48 bg-gray-100 rounded-lg flex items-center justify-center text-gray-500">
-                Camera not available
-              </div>
-            )}
-          </div>
-
-          <form onSubmit={handleSubmit}>
-            <select
-              value={type}
-              onChange={(e) => setType(e.target.value)}
-              className="w-full mb-4 px-3 py-2 border rounded shadow focus:ring"
-            >
-              <option value="check-in">Check In</option>
-              <option value="check-out">Check Out</option>
-            </select>
-
-            <button
-              type="submit"
-              disabled={!image || isLoading}
-              className={`w-full py-3 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition ${(!image || isLoading) ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
-              {isLoading ? 'Processing...' : <><FiCheckCircle className="inline-block mr-1" /> {type === 'check-in' ? 'Check In' : 'Check Out'}</>}
-            </button>
-          </form>
-
+        <div className="flex justify-end mb-2">
           <button
-            onClick={() => setShowAttendanceModal(true)}
-            className="mt-4 w-full py-3 rounded-full bg-yellow-500 text-white font-semibold shadow hover:shadow-md hover:bg-yellow-600 transition"
+            onClick={() => navigate(-1)}
+            className="text-sm text-blue-600 hover:text-blue-800 underline"
           >
-            📋 View Attendance
+            ← Back
           </button>
+        </div>
 
-          {/* Fullscreen Modal */}
-          {showAttendanceModal && (
-            <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center">
-              <div className="w-full h-full bg-white overflow-auto p-6 relative rounded-lg shadow-lg">
-                <button
-                  onClick={() => setShowAttendanceModal(false)}
-                  className="absolute top-4 right-4 text-gray-700 hover:text-red-600 text-xl"
-                >
-                  &times;
-                </button>
-                <h2 className="text-2xl font-bold mb-4 text-center">📅 Recent Attendance</h2>
-                <table className="min-w-full text-sm bg-white border border-gray-200 rounded">
-                  <thead className="bg-gray-100">
-                    <tr>
-                      <th className="px-4 py-2 text-left">Date</th>
-                      <th className="px-4 py-2 text-left">Time</th>
-                      <th className="px-4 py-2 text-left">Type</th>
-                      <th className="px-4 py-2 text-left">Location</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {attendanceHistory.map((a, idx) => (
-                      <tr key={idx} className="border-t">
-                        <td className="px-4 py-2">{new Date(a.timestamp).toLocaleDateString()}</td>
-                        <td className="px-4 py-2">{new Date(a.timestamp).toLocaleTimeString()}</td>
-                        <td className="px-4 py-2 capitalize">{a.type}</td>
-                        <td className="px-4 py-2">{a.location}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+        <div className="text-center mb-6">
+          <h2 className="text-2xl font-bold">{type === 'check-in' ? 'Check In' : 'Check Out'}</h2>
+          <p className="text-gray-600">{type === 'check-in' ? 'Start your work day' : 'End your work day'}</p>
+          {userName && (
+            <div className="mt-2 flex justify-center items-center text-gray-700">
+              <FiUser className="mr-1" />
+              {userName}
             </div>
           )}
         </div>
+
+        <div className="mb-4">
+          <div className="flex items-center text-sm text-gray-600 mb-2">
+            <FiMapPin className="mr-2" />
+            {location || 'Location will be shown after capture'}
+          </div>
+          <div className="flex items-center text-sm text-gray-600">
+            <FiClock className="mr-2" />
+            {new Date().toLocaleString()}
+          </div>
+        </div>
+
+        <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 mb-4">
+          {image ? (
+            <div className="relative">
+              <img src={URL.createObjectURL(image)} alt="Captured" className="w-full rounded-lg" />
+              <button
+                onClick={retakePhoto}
+                className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
+              >
+                <FiRefreshCw />
+              </button>
+            </div>
+          ) : isCapturing ? (
+            <div className="relative">
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full rounded-lg transform scale-x-[-1]"
+              />
+              <div className="absolute bottom-4 left-0 right-0 flex justify-center">
+                <button onClick={captureImage} className="bg-white rounded-full p-3 shadow hover:bg-gray-100">
+                  <FiCamera className="text-gray-700 text-xl" />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="h-48 bg-gray-100 rounded-lg flex items-center justify-center text-gray-500">
+              Camera not available
+            </div>
+          )}
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          <select
+            value={type}
+            onChange={(e) => setType(e.target.value)}
+            className="w-full mb-4 px-3 py-2 border rounded shadow focus:ring"
+          >
+            <option value="check-in">Check In</option>
+            <option value="check-out">Check Out</option>
+          </select>
+
+          <button
+            type="submit"
+            disabled={!image || isLoading}
+            className={`w-full py-3 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition ${
+              (!image || isLoading) ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
+          >
+            {isLoading ? 'Processing...' : (
+              <>
+                <FiCheckCircle className="inline-block mr-1" />
+                {type === 'check-in' ? 'Check In' : 'Check Out'}
+              </>
+            )}
+          </button>
+        </form>
+
+        <button
+          onClick={() => setShowAttendanceModal(true)}
+          className="mt-4 w-full py-3 rounded-full bg-yellow-500 text-white font-semibold shadow hover:shadow-md hover:bg-yellow-600 transition"
+        >
+          📋 View Attendance
+        </button>
+
+        {showAttendanceModal && (
+          <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center">
+            <div className="w-full h-full bg-white overflow-auto p-6 relative rounded-lg shadow-lg">
+              <button
+                onClick={() => setShowAttendanceModal(false)}
+                className="absolute top-4 right-4 text-gray-700 hover:text-red-600 text-xl"
+              >
+                &times;
+              </button>
+              <h2 className="text-2xl font-bold mb-4 text-center">📅 Recent Attendance</h2>
+              <table className="min-w-full text-sm bg-white border border-gray-200 rounded">
+                <thead className="bg-gray-100">
+                  <tr>
+                    <th className="px-4 py-2 text-left">Date</th>
+                    <th className="px-4 py-2 text-left">Time</th>
+                    <th className="px-4 py-2 text-left">Type</th>
+                    <th className="px-4 py-2 text-left">Location</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {attendanceHistory.map((a, idx) => (
+                    <tr key={idx} className="border-t">
+                      <td className="px-4 py-2">{new Date(a.timestamp).toLocaleDateString()}</td>
+                      <td className="px-4 py-2">{new Date(a.timestamp).toLocaleTimeString()}</td>
+                      <td className="px-4 py-2 capitalize">{a.type}</td>
+                      <td className="px-4 py-2">{a.location}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
     </div>
-  );
+  </div>
+);
+
 }
 
 export default Attendance;
