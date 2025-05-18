@@ -38,7 +38,7 @@ const upload = multer({ storage });
 
 const allowedOrigins = [
   'http://localhost:3000',
-  'https://attendance.jobzenter.in/', // ← replace with your frontend URL
+  'https://attendance.jobzenter.in', // ← replace with your frontend URL
   'https://uc-attendance-system.onrender.com' // ← if you're testing via same domain
 ];
 
