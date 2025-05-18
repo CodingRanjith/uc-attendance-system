@@ -36,16 +36,23 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 
-const allowedOrigins = ['http://localhost:3000', 'https://ujattendance.netlify.app', 'https://6825891884b868fc93a89ff7--rococo-selkie-2b4fcf.netlify.app'];
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://attendance.jobzenter.in/', // ← replace with your frontend URL
+  'https://uc-attendance-system.onrender.com' // ← if you're testing via same domain
+];
 
 app.use(cors({
-  origin: (origin, callback) => {
+  origin: function (origin, callback) {
     if (!origin || allowedOrigins.includes(origin)) {
-      return callback(null, true);
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
     }
-    return callback(new Error('Not allowed by CORS'));
-  }
+  },
+  credentials: true
 }));
+
 
 
 // Routes
