@@ -14,7 +14,8 @@ import { compressImage } from './utils';
 function AttendancePage() {
   const [user, setUser] = useState({ name: '', position: '', company: '' });
   const [type, setType] = useState('check-in');
-  const [image, setImage] = useState(null);
+  const [image, setImage] = useState(null); // blob URL for preview
+  const [compressedBlob, setCompressedBlob] = useState(null); // actual file data
   const [capturedTime, setCapturedTime] = useState(null);
   const [location, setLocation] = useState('');
   const [attendanceHistory, setAttendanceHistory] = useState([]);
@@ -55,20 +56,22 @@ function AttendancePage() {
   }, []);
 
   const startCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play();
-      }
-      setIsCapturing(true);
-      setImage(null);
-      setCapturedTime(null);
-    } catch (err) {
-      Swal.fire('Camera Error', 'Please allow camera access.', 'error');
-    }
-  };
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    streamRef.current = stream;
+    if (videoRef.current) {
+  videoRef.current.srcObject = stream;
+  videoRef.current.play(); // important!
+}
+    setIsCapturing(true);
+    setImage(null);
+    setCapturedTime(null);
+  } catch (err) {
+    console.error('Camera Error:', err);
+    Swal.fire('Camera Error', err.message || 'Please allow camera access.', 'error');
+  }
+};
+
 
   const stopCamera = () => {
     if (streamRef.current) {
@@ -79,16 +82,27 @@ function AttendancePage() {
 
   const captureImage = () => {
     if (!videoRef.current) return;
+
     const canvas = document.createElement('canvas');
     canvas.width = videoRef.current.videoWidth;
     canvas.height = videoRef.current.videoHeight;
     canvas.getContext('2d').drawImage(videoRef.current, 0, 0);
+
     canvas.toBlob(async blob => {
       const file = new File([blob], 'attendance.jpg', { type: 'image/jpeg' });
       const compressed = await compressImage(file);
       if (compressed) {
         setImage(URL.createObjectURL(compressed));
+        setCompressedBlob(compressed);
         setCapturedTime(new Date());
+
+        // Get location immediately after capturing
+        navigator.geolocation.getCurrentPosition(pos => {
+          const coords = `${pos.coords.latitude},${pos.coords.longitude}`;
+          setLocation(coords);
+        }, () => {
+          Swal.fire('Location Error', 'Enable GPS to capture location.', 'warning');
+        });
       } else {
         Swal.fire('Compression Failed', 'Image compression unsuccessful.', 'error');
       }
@@ -96,36 +110,31 @@ function AttendancePage() {
   };
 
   const submitAttendance = async () => {
-    navigator.geolocation.getCurrentPosition(async pos => {
-      const coords = `${pos.coords.latitude},${pos.coords.longitude}`;
-      setLocation(coords);
+    if (!compressedBlob || !location) {
+      Swal.fire('Missing Data', 'Ensure image and location are available before submitting.', 'warning');
+      return;
+    }
 
-      const formData = new FormData();
-      formData.append('type', type);
-      formData.append('location', coords);
+    const formData = new FormData();
+    formData.append('type', type);
+    formData.append('location', location);
+    formData.append('image', compressedBlob);
 
-      const response = await fetch(image);
-      const blob = await response.blob();
-      const file = new File([blob], 'attendance.jpg', { type: 'image/jpeg' });
-      formData.append('image', file);
+    try {
+      await axios.post(API_ENDPOINTS.postAttendance, formData, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'multipart/form-data',
+        },
+      });
 
-      try {
-        await axios.post(API_ENDPOINTS.postAttendance, formData, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'multipart/form-data',
-          },
-        });
-
-        Swal.fire('Success', `${type === 'check-in' ? 'Checked In' : 'Checked Out'} successfully`, 'success');
-        setImage(null);
-        stopCamera();
-      } catch (err) {
-        Swal.fire('Failed', 'Could not submit attendance', 'error');
-      }
-    }, () => {
-      Swal.fire('Location Error', 'Enable GPS to proceed.', 'warning');
-    });
+      Swal.fire('Success', `${type === 'check-in' ? 'Checked In' : 'Checked Out'} successfully`, 'success');
+      setImage(null);
+      setCompressedBlob(null);
+      stopCamera();
+    } catch (err) {
+      Swal.fire('Failed', 'Could not submit attendance', 'error');
+    }
   };
 
   const filteredLogs = attendanceHistory.filter(entry =>
@@ -186,13 +195,9 @@ function AttendancePage() {
                 <img src={image} alt="Captured" className="rounded-lg w-full object-cover" />
                 {capturedTime && (
                   <div className="text-sm text-gray-600 mt-2 space-y-1">
-                    <p>
-                      <span className="font-medium">Captured at:</span> {capturedTime.toLocaleTimeString()} on {capturedTime.toLocaleDateString()}
-                    </p>
+                    <p><span className="font-medium">Captured at:</span> {capturedTime.toLocaleTimeString()} on {capturedTime.toLocaleDateString()}</p>
                     {location && (
-                      <p>
-                        <span className="font-medium">Location:</span> <span className="text-gray-700">{location}</span>
-                      </p>
+                      <p><span className="font-medium">Location:</span> {location}</p>
                     )}
                   </div>
                 )}
