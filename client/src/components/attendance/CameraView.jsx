@@ -16,7 +16,7 @@ const CameraView = forwardRef((props, ref) => {
         autoPlay
         playsInline
         muted
-        className="w-full h-auto object-cover aspect-video"
+        className="w-full h-80 object-cover aspect-video"
         style={{ backgroundColor: 'black' }}
       />
     </div>
