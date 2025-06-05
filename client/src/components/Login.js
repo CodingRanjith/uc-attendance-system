@@ -9,16 +9,6 @@ import jobzenterLogo from '../assets/jzlogo.png';
 import urbancodeLogo from '../assets/uclogo.png';
 
 function Login() {
-  navigator.geolocation.getCurrentPosition(
-    (position) => {
-      console.log("Latitude:", position.coords.latitude);
-      console.log("Longitude:", position.coords.longitude);
-    },
-    (error) => {
-      console.error("Error getting location:", error);
-    }
-  );
-
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -29,52 +19,34 @@ function Login() {
     setIsLoading(true);
 
     try {
-      const response = await axios.post(API_ENDPOINTS.login, {
-        email,
-        password
-      }, {
-        validateStatus: (status) => status < 500
-      });
+      const response = await axios.post(API_ENDPOINTS.login, { email, password }, { validateStatus: s => s < 500 });
 
-      if (response.status !== 200) {
-        throw new Error(response.data?.error || 'Login failed');
-      }
+      if (response.status !== 200) throw new Error(response.data?.error || 'Login failed');
 
       const token = response.data.token;
       localStorage.setItem('token', token);
       const decoded = jwtDecode(token);
-      console.log('Decoded JWT:', decoded);
 
-      // ✅ Show success message with 3-sec delay
       Swal.fire({
         icon: 'success',
-        title: 'Login Successful!',
-        text: 'Redirecting in 3 seconds...',
-        timer: 3000,
+        title: 'Welcome!',
+        text: 'Login successful. Redirecting...',
+        timer: 2000,
+        showConfirmButton: false,
         timerProgressBar: true,
-        showConfirmButton: false
       });
 
       setTimeout(() => {
-        switch (decoded.role) {
-          case 'admin':
-            navigate('/dashboard');
-            break;
-          case 'employee':
-            navigate('/attendance');
-            break;
-          default:
-            navigate('/');
-        }
-      }, 3000);
+        if (decoded.role === 'admin') navigate('/dashboard');
+        else if (decoded.role === 'employee') navigate('/attendance');
+        else navigate('/');
+      }, 2000);
 
     } catch (err) {
-      console.error('Login error:', err);
       Swal.fire({
         icon: 'error',
         title: 'Login Failed',
-        text: err.response?.data?.message || err.message || 'Please try again.',
-        confirmButtonColor: '#e53e3e'
+        text: err?.message || 'Something went wrong.',
       });
     } finally {
       setIsLoading(false);
@@ -82,93 +54,84 @@ function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-green-200 via-lime-100 to-yellow-50">
-      <div className="relative w-full max-w-md backdrop-filter backdrop-blur-md bg-white bg-opacity-30 rounded-2xl shadow-2xl overflow-hidden border border-white border-opacity-20">
-        <div className="p-8">
-          <div className="flex justify-center items-center gap-6 mb-6">
-            <img src={urbancodeLogo} alt="Urbancode" className="h-12 object-contain" />
-            <span className="text-2xl font-bold text-gray-800">UC & JZ</span>
-            <img src={jobzenterLogo} alt="Jobzenter" className="h-12 object-contain" />
+    <div className="min-h-screen bg-gradient-to-br from-lime-200 via-yellow-100 to-white flex items-center justify-center p-6">
+      <div className="w-full max-w-md bg-white/70 backdrop-blur-lg border border-white/30 rounded-3xl shadow-2xl px-8 py-10">
+        <div className="flex justify-center items-center gap-4 mb-6">
+          <img src={urbancodeLogo} alt="UC" className="h-10" />
+          <h1 className="text-2xl font-bold text-gray-800 tracking-wide">UC & JZ</h1>
+          <img src={jobzenterLogo} alt="JZ" className="h-10" />
+        </div>
+
+        <div className="text-center mb-8">
+          <h2 className="text-3xl font-extrabold text-gray-800 mb-2">Sign In</h2>
+          <p className="text-gray-600 text-sm">Enter your credentials below</p>
+        </div>
+
+        <form className="space-y-5" onSubmit={handleSubmit}>
+          <div>
+            <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-1">
+              Email
+            </label>
+            <input
+              type="email"
+              id="email"
+              required
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white/60 placeholder-gray-400 text-gray-800 focus:ring-2 focus:ring-green-400 focus:outline-none"
+              placeholder="you@domain.com"
+            />
           </div>
 
-          <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold text-gray-800 mb-2">Welcome Back</h2>
-            <p className="text-gray-600">Sign in to access your account</p>
+          <div>
+            <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-1">
+              Password
+            </label>
+            <input
+              type="password"
+              id="password"
+              required
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white/60 placeholder-gray-400 text-gray-800 focus:ring-2 focus:ring-green-400 focus:outline-none"
+              placeholder="••••••••"
+            />
           </div>
 
-          <form className="space-y-6" onSubmit={handleSubmit}>
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                Email Address
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 bg-white bg-opacity-40 border border-gray-300 rounded-lg text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500"
-                placeholder="you@example.com"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                Password
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 bg-white bg-opacity-40 border border-gray-300 rounded-lg text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500"
-                placeholder="••••••••"
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <label className="flex items-center space-x-2 text-sm text-gray-700">
-                <input type="checkbox" className="rounded border-gray-300" />
-                <span>Remember me</span>
-              </label>
-              <button
-                type="button"
-                className="text-sm text-green-700 hover:underline"
-                onClick={() => Swal.fire({
-                  icon: 'info',
-                  title: 'Forgot Password',
-                  text: 'This feature is coming soon.',
-                  confirmButtonColor: '#10b981'
-                })}
-              >
-                Forgot password?
-              </button>
-            </div>
-
+          <div className="flex items-center justify-between text-sm">
+            <label className="flex items-center gap-2 text-gray-700">
+              <input type="checkbox" className="accent-green-600" />
+              Remember me
+            </label>
             <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition disabled:opacity-50"
+              type="button"
+              onClick={() =>
+                Swal.fire({
+                  icon: 'info',
+                  title: 'Forgot Password?',
+                  text: 'This feature is coming soon!',
+                })
+              }
+              className="text-green-600 hover:underline font-medium"
             >
-              {isLoading ? (
-                <>
-                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                  Signing in...
-                </>
-              ) : 'Sign in'}
+              Forgot?
             </button>
-          </form>
-
-          <div className="mt-6 text-center text-sm text-gray-600">
-            Don’t have an account?{' '}
-            <a href="/register" className="text-green-700 font-medium hover:underline">Register</a>
           </div>
+
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-lg transition duration-150 shadow-md"
+          >
+            {isLoading ? 'Signing in...' : 'Sign In'}
+          </button>
+        </form>
+
+        <div className="text-center text-sm mt-6 text-gray-600">
+          Don’t have an account?{' '}
+          <a href="/register" className="text-green-700 font-semibold hover:underline">
+            Register
+          </a>
         </div>
       </div>
     </div>
