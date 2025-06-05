@@ -13,9 +13,9 @@ import { compressImage } from './utils';
 
 function AttendancePage() {
   const [user, setUser] = useState({ name: '', position: '', company: '' });
-  const [type, setType] = useState('check-in');
-  const [image, setImage] = useState(null); // blob URL for preview
-  const [compressedBlob, setCompressedBlob] = useState(null); // actual file data
+  const [type, setType] = useState(null);
+  const [image, setImage] = useState(null);
+  const [compressedBlob, setCompressedBlob] = useState(null);
   const [capturedTime, setCapturedTime] = useState(null);
   const [location, setLocation] = useState('');
   const [attendanceHistory, setAttendanceHistory] = useState([]);
@@ -38,15 +38,22 @@ function AttendancePage() {
     const fetchData = async () => {
       try {
         const token = localStorage.getItem('token');
-        const last = await axios.get(API_ENDPOINTS.getLastAttendance, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setType(last.data.type === 'check-in' ? 'check-out' : 'check-in');
-
         const res = await axios.get(API_ENDPOINTS.getMyAttendance, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setAttendanceHistory(res.data);
+
+        const today = new Date().toDateString();
+        const todayEntries = res.data.filter(
+          entry => new Date(entry.timestamp).toDateString() === today
+        );
+
+        if (todayEntries.length === 0) {
+          setType('check-in');
+        } else {
+          const last = todayEntries[todayEntries.length - 1];
+          setType(last.type === 'check-in' ? 'check-out' : null); // null if already checked out
+        }
       } catch (err) {
         Swal.fire({ icon: 'error', title: 'Fetch Error', text: 'Unable to load attendance history.' });
       }
@@ -56,57 +63,53 @@ function AttendancePage() {
   }, []);
 
   const startCamera = async () => {
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-    streamRef.current = stream;
-    if (videoRef.current) {
-  videoRef.current.srcObject = stream;
-  videoRef.current.play(); // important!
-}
-    setIsCapturing(true);
-    setImage(null);
-    setCapturedTime(null);
-  } catch (err) {
-    console.error('Camera Error:', err);
-    Swal.fire('Camera Error', err.message || 'Please allow camera access.', 'error');
-  }
-};
-
+    try {
+      setIsCapturing(true);
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+      streamRef.current = stream;
+      if (videoRef.current) videoRef.current.srcObject = stream;
+    } catch (err) {
+      Swal.fire({ icon: 'error', title: 'Camera Access Denied', text: 'Please enable your camera and refresh the page.' });
+      setIsCapturing(false);
+    }
+  };
 
   const stopCamera = () => {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
     }
     setIsCapturing(false);
   };
 
-  const captureImage = () => {
+  const getLocation = () => {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => setLocation(`${pos.coords.latitude},${pos.coords.longitude}`),
+      () => Swal.fire({ icon: 'error', title: 'Location Error', text: 'Please enable GPS to proceed.' })
+    );
+  };
+
+  const captureImage = async () => {
     if (!videoRef.current) return;
 
     const canvas = document.createElement('canvas');
     canvas.width = videoRef.current.videoWidth;
     canvas.height = videoRef.current.videoHeight;
-    canvas.getContext('2d').drawImage(videoRef.current, 0, 0);
+    canvas.getContext('2d').drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
 
     canvas.toBlob(async blob => {
+      if (!blob) return;
       const file = new File([blob], 'attendance.jpg', { type: 'image/jpeg' });
       const compressed = await compressImage(file);
       if (compressed) {
         setImage(URL.createObjectURL(compressed));
         setCompressedBlob(compressed);
         setCapturedTime(new Date());
-
-        // Get location immediately after capturing
-        navigator.geolocation.getCurrentPosition(pos => {
-          const coords = `${pos.coords.latitude},${pos.coords.longitude}`;
-          setLocation(coords);
-        }, () => {
-          Swal.fire('Location Error', 'Enable GPS to capture location.', 'warning');
-        });
+        getLocation(); // important
       } else {
-        Swal.fire('Compression Failed', 'Image compression unsuccessful.', 'error');
+        Swal.fire({ icon: 'error', title: 'Compression Failed' });
       }
-    }, 'image/jpeg');
+    }, 'image/jpeg', 0.9);
   };
 
   const submitAttendance = async () => {
@@ -129,16 +132,37 @@ function AttendancePage() {
       });
 
       Swal.fire('Success', `${type === 'check-in' ? 'Checked In' : 'Checked Out'} successfully`, 'success');
+
       setImage(null);
       setCompressedBlob(null);
+      setLocation('');
       stopCamera();
+
+      // Refresh after submission
+      const res = await axios.get(API_ENDPOINTS.getMyAttendance, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+      });
+      setAttendanceHistory(res.data);
+
+      const today = new Date().toDateString();
+      const todayEntries = res.data.filter(
+        entry => new Date(entry.timestamp).toDateString() === today
+      );
+
+      if (todayEntries.length === 0) {
+        setType('check-in');
+      } else {
+        const last = todayEntries[todayEntries.length - 1];
+        setType(last.type === 'check-in' ? 'check-out' : null);
+      }
+
     } catch (err) {
       Swal.fire('Failed', 'Could not submit attendance', 'error');
     }
   };
 
-  const filteredLogs = attendanceHistory.filter(entry =>
-    new Date(entry.timestamp).toDateString() === selectedDate.toDateString()
+  const filteredLogs = attendanceHistory.filter(
+    (entry) => new Date(entry.timestamp).toDateString() === selectedDate.toDateString()
   );
 
   return (
@@ -158,10 +182,13 @@ function AttendancePage() {
         <ActivityLog activities={filteredLogs} />
       </div>
 
-      {!isCapturing && (
+      {type && !isCapturing && (
         <div className="fixed bottom-6 left-6 right-6 flex justify-center z-30">
           <button
-            onClick={startCamera}
+            onClick={() => {
+              getLocation();
+              startCamera();
+            }}
             className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-full shadow-lg transition"
           >
             {type === 'check-in' ? 'Check In' : 'Check Out'}
@@ -176,16 +203,10 @@ function AttendancePage() {
               <>
                 <CameraView ref={videoRef} />
                 <div className="flex justify-between mt-4">
-                  <button
-                    onClick={stopCamera}
-                    className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg"
-                  >
+                  <button onClick={stopCamera} className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg">
                     Cancel
                   </button>
-                  <button
-                    onClick={captureImage}
-                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg"
-                  >
+                  <button onClick={captureImage} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg">
                     Capture
                   </button>
                 </div>
@@ -203,15 +224,17 @@ function AttendancePage() {
                 )}
                 <div className="flex justify-between mt-4">
                   <button
-                    onClick={startCamera}
+                    onClick={() => {
+                      URL.revokeObjectURL(image);
+                      setImage(null);
+                      setCompressedBlob(null);
+                      startCamera();
+                    }}
                     className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg"
                   >
                     Retake
                   </button>
-                  <button
-                    onClick={submitAttendance}
-                    className="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-lg"
-                  >
+                  <button onClick={submitAttendance} className="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-lg">
                     Submit {type === 'check-in' ? 'Check In' : 'Check Out'}
                   </button>
                 </div>
