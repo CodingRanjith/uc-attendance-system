@@ -3,11 +3,9 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Login from './components/Login';
 import Register from './components/Register';
 import Dashboard from './pages/Dashboard';
-// import Attendance from './components/Attendance';
+import Attendance from './components/Attendance';
 import EditUser from './components/EditUser';
 // import { AuthProvider } from './components/AuthContext';
-import AttendancePage from './components/attendance/AttendancePage';
-
 
 function App() {
   return (
@@ -17,7 +15,7 @@ function App() {
           <Route path="/login" element={<Login />} /> {/* Optional if you still want access */}
           <Route path="/register" element={<Register />} /> 
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/attendance" element={<AttendancePage />} />
+          <Route path="/attendance" element={<Attendance />} />
           <Route path="/edit-user" element={<EditUser />} />
         </Routes>
     </Router>
