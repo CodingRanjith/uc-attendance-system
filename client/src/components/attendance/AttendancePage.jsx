@@ -55,23 +55,20 @@ function AttendancePage() {
   }, []);
 
   const startCamera = async () => {
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-    streamRef.current = stream;
-
-    if (videoRef.current) {
-      videoRef.current.srcObject = stream;
-      videoRef.current.play(); // optional fallback
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play();
+      }
+      setIsCapturing(true);
+      setImage(null);
+      setCapturedTime(null);
+    } catch (err) {
+      Swal.fire('Camera Error', 'Please allow camera access.', 'error');
     }
-
-    setIsCapturing(true);
-    setImage(null);
-    setCapturedTime(null);
-  } catch (err) {
-    Swal.fire('Camera Error', 'Please allow camera access.', 'error');
-  }
-};
-
+  };
 
   const stopCamera = () => {
     if (streamRef.current) {
@@ -188,9 +185,16 @@ function AttendancePage() {
               <>
                 <img src={image} alt="Captured" className="rounded-lg w-full object-cover" />
                 {capturedTime && (
-                  <p className="text-sm text-gray-600">
-                    Captured at: {capturedTime.toLocaleTimeString()} on {capturedTime.toLocaleDateString()}
-                  </p>
+                  <div className="text-sm text-gray-600 mt-2 space-y-1">
+                    <p>
+                      <span className="font-medium">Captured at:</span> {capturedTime.toLocaleTimeString()} on {capturedTime.toLocaleDateString()}
+                    </p>
+                    {location && (
+                      <p>
+                        <span className="font-medium">Location:</span> <span className="text-gray-700">{location}</span>
+                      </p>
+                    )}
+                  </div>
                 )}
                 <div className="flex justify-between mt-4">
                   <button
