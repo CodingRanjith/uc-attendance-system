@@ -1,25 +1,47 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+
+// Public Pages
 import Login from './components/Login';
 import Register from './components/Register';
-import Dashboard from './pages/Dashboard';
-// import Attendance from './components/Attendance';
-import EditUser from './components/EditUser';
-// import { AuthProvider } from './components/AuthContext';
-import AttendancePage from './components/attendance/AttendancePage';
 
+// Admin Pages
+import Dashboard from './pages/admin/Dashboard';
+import Employees from './pages/admin/Employees';
+import Salary from './pages/admin/Salary';
+import Attendance from './pages/admin/Attendance';
+import Reports from './pages/admin/Reports';
+
+
+import AttendancePage from './pages/employee/AttendancePage';
+import EditUser from './components/EditUser';
+
+// Layout
+import Layout from './components/admin-dashboard/layout/Layout';
 
 function App() {
   return (
     <Router>
-        <Routes>
-          <Route path="/" element={<Login />} /> {/* Changed default route */}
-          <Route path="/login" element={<Login />} /> {/* Optional if you still want access */}
-          <Route path="/register" element={<Register />} /> 
+      <Routes>
+
+        {/* Public Routes */}
+        <Route path="/" element={<Login />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/attendance" element={<AttendancePage />} />
+
+        {/* Protected Admin Layout Wrapper */}
+        <Route element={<Layout />}>
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/attendance" element={<AttendancePage />} />
+          <Route path="/employees" element={<Employees />} />
+          <Route path="/salary" element={<Salary />} />
+          <Route path="/attendances" element={<Attendance />} />
+          <Route path="/reports" element={<Reports />} />
+          {/* Add other admin routes here */}
           <Route path="/edit-user" element={<EditUser />} />
-        </Routes>
+        </Route>
+
+      </Routes>
     </Router>
   );
 }

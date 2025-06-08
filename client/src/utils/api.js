@@ -1,23 +1,34 @@
 // src/utils/api.js
-export const BASE_URL = 'https://uc-attendance-system.onrender.com';
+// export const BASE_URL = 'https://uc-attendance-system.onrender.com';
 
-// export const BASE_URL = 'http://localhost:5000';
+export const BASE_URL = 'http://localhost:5000';
 
 export const API_ENDPOINTS = {
-  attendance: `${BASE_URL}/attendance/all`,
-  users: `${BASE_URL}/users`,
-  getAttendanceAll: `${BASE_URL}/attendance/all`,
-  getUsers: `${BASE_URL}/users`,
-  getAttendanceByDate: (date) => `${BASE_URL}/admin/attendance?date=${date}`,
-  getLastAttendance: `${BASE_URL}/attendance/last`,
+  // Auth
   login: `${BASE_URL}/login`,
   authLogin: `${BASE_URL}/api/auth/login`,
   register: `${BASE_URL}/register`,
-  uploadPath: `${BASE_URL}/uploads`,
+
+  // Attendance
   postAttendance: `${BASE_URL}/attendance`,
   getMyAttendance: `${BASE_URL}/attendance/me`,
+  getLastAttendance: `${BASE_URL}/attendance/last`,
+  getAttendanceAll: `${BASE_URL}/attendance/all`,
+  getAttendanceByDate: (date) => `${BASE_URL}/attendance/date/${date}`,
+  getAttendanceByUser: (userId) => `${BASE_URL}/attendance/user/${userId}`,
 
-  // add more as needed
+  // Users
+  getUsers: `${BASE_URL}/users`,
+  getUserById: (userId) => `${BASE_URL}/users/${userId}`,
+  updateUser: (userId) => `${BASE_URL}/users/${userId}`,
+  getCurrentUser: `${BASE_URL}/users/me`,
+
+  // Admin Dashboard
+  getAdminSummary: `${BASE_URL}/api/admin/summary`,
+  getRecentAttendanceLogs: `${BASE_URL}/api/admin/recent-attendance`,
+
+  // Misc
+  uploadPath: `${BASE_URL}/uploads`,
 };
 
 

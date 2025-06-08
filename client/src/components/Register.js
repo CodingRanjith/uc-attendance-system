@@ -1,13 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import {
-  FiUser,
-  FiMail,
-  FiLock,
-  FiBriefcase,
-  FiHome,
-  FiCalendar,
-  FiPhone
+  FiUser, FiMail, FiLock, FiBriefcase, FiHome, FiCalendar, FiPhone
 } from 'react-icons/fi';
 import { API_ENDPOINTS } from '../utils/api';
 import Swal from 'sweetalert2';
@@ -36,11 +30,11 @@ function Register() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleScheduleChange = (day, field, value) => {
-    setWeeklySchedule((prev) => ({
+    setWeeklySchedule(prev => ({
       ...prev,
       [day]: { ...prev[day], [field]: value }
     }));
@@ -49,7 +43,6 @@ function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-
     try {
       await axios.post(API_ENDPOINTS.register, {
         ...formData,
@@ -60,7 +53,7 @@ function Register() {
         icon: 'success',
         title: 'User Created!',
         text: '🎉 Employee registered successfully!',
-        confirmButtonColor: '#10b981'
+        confirmButtonColor: '#6ca8a4'
       });
 
       setFormData({
@@ -74,37 +67,25 @@ function Register() {
 
     } catch (error) {
       console.error('Error creating user:', error);
-
       Swal.fire({
         icon: 'error',
         title: 'Oops!',
         text: error.response?.data?.message || '❌ Failed to create user',
         confirmButtonColor: '#ef4444'
       });
-
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const days = [
-    'Monday',
-    'Tuesday',
-    'Wednesday',
-    'Thursday',
-    'Friday',
-    'Saturday',
-    'Sunday'
-  ];
+  const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-200 via-yellow-100 to-lime-100 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto backdrop-blur-lg bg-white bg-opacity-30 border border-white border-opacity-30 shadow-2xl rounded-3xl p-10 animate-fade-in">
+    <div className="min-h-screen bg-[#f0f4ff] py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto backdrop-blur-lg bg-white/70 border border-[#e0ecff] shadow-xl rounded-3xl p-10">
         <div className="text-center mb-10">
-          <h2 className="text-4xl font-bold text-green-800">Employee Registration</h2>
-          <p className="text-gray-700 mt-2">
-            Fill in the details to create a user with a weekly schedule
-          </p>
+          <h2 className="text-4xl font-bold text-[#2c2e3e]">UC & JZ Employee Registration</h2>
+          <p className="text-[#6e7b8b] mt-2">Fill in the details to create a user with a weekly schedule</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
@@ -114,8 +95,8 @@ function Register() {
             <InputField icon={<FiLock />} type="password" label="Password" name="password" value={formData.password} onChange={handleChange} placeholder="••••••••" />
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1 flex items-center">
-                <FiPhone className="mr-2" /> Phone Number
+              <label className="block text-sm font-semibold text-[#2c2e3e] mb-1 flex items-center">
+                <FiPhone className="mr-2 text-[#6ca8a4]" /> Phone Number
               </label>
               <div className="flex">
                 <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-700 text-sm">
@@ -129,7 +110,7 @@ function Register() {
                   required
                   maxLength="10"
                   placeholder="9876543210"
-                  className="w-full rounded-r-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  className="w-full rounded-r-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#6ca8a4] focus:border-[#6ca8a4]"
                 />
               </div>
             </div>
@@ -137,15 +118,15 @@ function Register() {
             <InputField icon={<FiBriefcase />} label="Position" name="position" value={formData.position} onChange={handleChange} placeholder="e.g. Developer" />
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1 flex items-center">
-                <FiHome className="mr-2" /> Company
+              <label className="block text-sm font-semibold text-[#2c2e3e] mb-1 flex items-center">
+                <FiHome className="mr-2 text-[#6ca8a4]" /> Company
               </label>
               <select
                 name="company"
                 value={formData.company}
                 onChange={handleChange}
                 required
-                className="block w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                className="block w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#6ca8a4] focus:border-[#6ca8a4]"
               >
                 <option value="">Select Company</option>
                 <option value="Jobzenter">Jobzenter</option>
@@ -157,8 +138,8 @@ function Register() {
 
           <div className="border-t border-gray-200 pt-6">
             <div className="flex items-center mb-4">
-              <FiCalendar className="h-5 w-5 text-green-500 mr-2" />
-              <h3 className="text-xl font-semibold text-gray-800">Weekly Schedule</h3>
+              <FiCalendar className="h-5 w-5 text-[#6ca8a4] mr-2" />
+              <h3 className="text-xl font-semibold text-[#2c2e3e]">Weekly Schedule</h3>
             </div>
 
             <div className="space-y-4">
@@ -170,9 +151,9 @@ function Register() {
                         type="checkbox"
                         checked={weeklySchedule[day].isLeave}
                         onChange={(e) => handleScheduleChange(day, 'isLeave', e.target.checked)}
-                        className="h-4 w-4 text-green-600 border-gray-300 rounded"
+                        className="h-4 w-4 text-[#6ca8a4] border-gray-300 rounded"
                       />
-                      <span className="ml-2 text-sm font-medium text-gray-700">{day}</span>
+                      <span className="ml-2 text-sm font-medium text-[#2c2e3e]">{day}</span>
                     </label>
                     <span className={`px-3 py-1 text-xs font-semibold rounded-full ${weeklySchedule[day].isLeave ? 'bg-gray-200 text-gray-600' : 'bg-green-200 text-green-800'}`}>
                       {weeklySchedule[day].isLeave ? 'Day Off' : 'Working Day'}
@@ -194,9 +175,7 @@ function Register() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className={`inline-flex items-center px-6 py-2 text-white text-sm font-medium rounded-md shadow-md transition bg-green-600 hover:bg-green-700 focus:ring-2 focus:ring-green-500 ${
-                isSubmitting ? 'opacity-70 cursor-not-allowed' : ''
-              }`}
+              className={`inline-flex items-center px-6 py-2 text-white text-sm font-medium rounded-md shadow-md transition bg-[#6ca8a4] hover:bg-[#5a9792] focus:ring-2 focus:ring-[#6ca8a4] ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
               {isSubmitting ? (
                 <>
@@ -220,8 +199,8 @@ function Register() {
 function InputField({ label, icon, name, value, onChange, placeholder, type = 'text' }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center">
-        {icon && <span className="mr-2 text-green-500">{icon}</span>}
+      <label className="block text-sm font-medium text-[#2c2e3e] mb-1 flex items-center">
+        {icon && <span className="mr-2 text-[#6ca8a4]">{icon}</span>}
         {label}
       </label>
       <input
@@ -231,7 +210,7 @@ function InputField({ label, icon, name, value, onChange, placeholder, type = 't
         onChange={onChange}
         required
         placeholder={placeholder}
-        className="block w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+        className="block w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#6ca8a4] focus:border-[#6ca8a4]"
       />
     </div>
   );

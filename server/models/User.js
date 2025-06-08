@@ -6,10 +6,10 @@ const UserSchema = new mongoose.Schema({
     required: true 
   },
   email: { 
-    type: String, 
+    type: String,
     required: true,
     unique: true,
-    lowercase: true
+    lowercase: true // ✅ Ensures consistent email casing
   },
   password: { 
     type: String, 
@@ -26,6 +26,10 @@ const UserSchema = new mongoose.Schema({
   company: {
     type: String,
     required: true
+  },
+  salary: {
+    type: Number,
+    default: 0 // ✅ Salary field added for payroll
   },
   role: { 
     type: String, 

@@ -178,8 +178,6 @@ app.get('/attendance/last', authMiddleware, async (req, res) => {
   }
 });
 
-// Add these routes to your existing index.js file
-
 // Get all users (admin only)
 app.get('/users', async (req, res) => {
   try {
@@ -190,7 +188,6 @@ app.get('/users', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
-
 
 // Get single user
 app.get('/users/:id', authMiddleware, roleMiddleware('admin'), async (req, res) => {
@@ -339,7 +336,80 @@ app.put('/users/:id', authMiddleware, roleMiddleware('admin'), async (req, res) 
 });
 
 
+app.get('/api/admin/summary', authMiddleware, roleMiddleware('admin'), async (req, res) => {
+  try {
+    const totalEmployees = await User.countDocuments({ role: 'employee' });
 
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+
+    const todayAttendance = await Attendance.find({
+      timestamp: { $gte: todayStart, $lte: todayEnd },
+      type: 'check-in'
+    }).distinct('user'); // unique check-ins
+
+    const presentToday = todayAttendance.length;
+    const absentToday = totalEmployees - presentToday;
+
+    res.json({
+      totalEmployees,
+      presentToday,
+      absentToday
+    });
+  } catch (error) {
+    console.error('Error fetching summary:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
+app.get('/api/admin/recent-attendance', authMiddleware, roleMiddleware('admin'), async (req, res) => {
+  try {
+    const logs = await Attendance.find()
+      .sort({ timestamp: -1 })
+      .limit(10)
+      .populate('user', 'name email');
+
+    const formatted = logs.map(log => ({
+      employeeName: log.user.name,
+      type: log.type,
+      timestamp: log.timestamp
+    }));
+
+    res.json(formatted);
+  } catch (error) {
+    console.error('Error fetching recent logs:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// PUT: Update salary for a user (admin only)
+app.put('/users/:id/salary', authMiddleware, roleMiddleware('admin'), async (req, res) => {
+  try {
+    const { salary } = req.body;
+
+    if (!salary || isNaN(salary)) {
+      return res.status(400).json({ error: 'Invalid salary value' });
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      req.params.id,
+      { salary },
+      { new: true }
+    ).select('-password');
+
+    if (!updatedUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json({ message: 'Salary updated successfully', user: updatedUser });
+  } catch (error) {
+    console.error('Error updating salary:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
 
 
