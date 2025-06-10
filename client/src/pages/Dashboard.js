@@ -245,7 +245,7 @@ const Dashboard = () => {
         ? urbancodeLogo
         : employee.company === 'Jobzenter'
         ? jobzenterLogo
-        : null;
+        : null; 
 
       return (
         <div 

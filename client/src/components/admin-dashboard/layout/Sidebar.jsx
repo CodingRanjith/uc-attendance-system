@@ -18,6 +18,8 @@ import {
 const menuItems = [
   { label: 'Dashboard', icon: <FiHome />, path: '/dashboard' },
   { label: 'All Employees', icon: <FiUsers />, path: '/employees' },
+  { label: 'All Users (Cards)', icon: <FiUsers />, path: '/all-users' }, // ✅ New Card View Page
+  { label: 'Pending Approvals', icon: <FiUsers />, path: '/pending-users' },
   { label: 'Daily Attendance', icon: <FiCalendar />, path: '/attendances' },
   { label: 'Working Days Summary', icon: <FiBarChart2 />, path: '/reports' },
   { label: 'Salary Details', icon: <FiDollarSign />, path: '/salary' },
@@ -30,6 +32,7 @@ const menuItems = [
   { label: 'Company Settings', icon: <FiSettings />, path: '/settings' },
   { label: 'Logout', icon: <FiLogOut />, path: '' }
 ];
+
 
 const Sidebar = () => {
   return (

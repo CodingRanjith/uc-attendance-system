@@ -8,7 +8,9 @@ const multer = require('multer');
 const path = require('path');
 require('dotenv').config();
 const haversine = require('haversine-distance');
-const officeLocation = require('./config/officeLocation'); // Import office location config
+const officeLocation = require('./config/officeLocation');
+const PendingUser = require('./models/PendingUser');
+const Holiday = require('./models/Holiday');
 
 const app = express();
 app.use(cors());
@@ -42,7 +44,8 @@ app.use(cors({ origin: '*' }));
 
 
 // Routes
-//  Register Route
+
+
 app.post('/register', async (req, res) => {
   try {
     const { name, email, password, phone, position, company, schedule } = req.body;
@@ -52,54 +55,86 @@ app.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'All fields are required' });
     }
 
-    // Check if email is already registered
+    // Check if already exists in either collection
     const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ error: 'Email already in use' });
+    const existingPending = await PendingUser.findOne({ email });
+
+
+    if (existingUser || existingPending) {
+      return res.status(400).json({ error: 'Email already in use or pending approval' });
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create user
-    const user = new User({
+    const pending = new PendingUser({
       name,
       email,
       password: hashedPassword,
       phone,
       position,
       company,
-      role: 'employee'
+      schedule
     });
 
-    await user.save();
-
-    // Create schedule if provided
-    if (schedule) {
-      const userSchedule = new Schedule({
-        user: user._id,
-        weeklySchedule: schedule
-      });
-      await userSchedule.save();
-    }
+    await pending.save();
 
     res.status(201).json({
-      message: 'User registered successfully',
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        position: user.position,
-        company: user.company,
-        role: user.role
-      }
+      message: 'Registration submitted and pending admin approval'
     });
+
   } catch (error) {
     console.error('Registration error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+
+app.post('/admin/approve/:id', authMiddleware, roleMiddleware('admin'), async (req, res) => {
+  try {
+    const pending = await PendingUser.findById(req.params.id);
+    if (!pending) return res.status(404).json({ error: 'Pending user not found' });
+
+    // Move to User collection
+    const user = new User({
+      name: pending.name,
+      email: pending.email,
+      password: pending.password,
+      phone: pending.phone,
+      position: pending.position,
+      company: pending.company,
+      role: 'employee'
+    });
+    await user.save();
+
+    // Create schedule if exists
+    if (pending.schedule) {
+      const userSchedule = new Schedule({
+        user: user._id,
+        weeklySchedule: pending.schedule
+      });
+      await userSchedule.save();
+    }
+
+    // Delete from pending
+    await PendingUser.findByIdAndDelete(pending._id);
+
+    res.json({ message: 'User approved and created successfully.' });
+  } catch (error) {
+    console.error('Approval error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
+app.get('/admin/pending-users', authMiddleware, roleMiddleware('admin'), async (req, res) => {
+  try {
+    const pendingUsers = await PendingUser.find();
+    res.json(pendingUsers);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch pending users' });
+  }
+});
+
 
 app.post('/login', async (req, res) => {
   try {
@@ -178,16 +213,110 @@ app.get('/attendance/last', authMiddleware, async (req, res) => {
   }
 });
 
-// Get all users (admin only)
-app.get('/users', async (req, res) => {
+// // Get all users (admin only)
+// app.get('/users', async (req, res) => {
+//   try {
+//     const users = await User.find({}, 'name email role phone position company');
+//     res.json(users);
+//   } catch (error) {
+//     console.error('Error fetching users:', error);
+//     res.status(500).json({ error: 'Internal server error' });
+//   }
+// });
+
+// app.get('/users', authMiddleware, async (req, res) => {
+//   const users = await User.find({}, 'name email role phone position company');
+//   res.json(users);
+// });
+
+// If you're using roleMiddleware somewhere else on `/users`, REMOVE IT:
+app.get('/users', authMiddleware, async (req, res) => {
+  const users = await User.find({}, 'name email role phone position company');
+  res.json(users);
+});
+
+// GET /attendance/user/:userId/summary/:year/:month
+app.get('/attendance/user/:userId/summary/:year/:month', authMiddleware, roleMiddleware('admin'), async (req, res) => {
+  const { userId, year, month } = req.params;
+  const startDate = new Date(year, month - 1, 1);
+  const endDate = new Date(year, month, 0, 23, 59, 59);
+
   try {
-    const users = await User.find({}, 'name email role phone position company');
-    res.json(users);
+    const allDays = new Set();
+    const attendanceRecords = await Attendance.find({
+      user: userId,
+      timestamp: { $gte: startDate, $lte: endDate },
+      type: 'check-in'
+    });
+
+    attendanceRecords.forEach(record => {
+      const dateKey = record.timestamp.toISOString().split('T')[0];
+      allDays.add(dateKey);
+    });
+
+    const presentCount = allDays.size;
+    const totalDays = endDate.getDate();
+    const absentCount = totalDays - presentCount;
+
+    res.json({ present: presentCount, absent: absentCount });
   } catch (error) {
-    console.error('Error fetching users:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Attendance summary error:', error);
+    res.status(500).json({ error: 'Failed to fetch attendance summary' });
   }
 });
+
+
+// GET /attendance/user/:userId/last
+app.get('/attendance/user/:userId/last', authMiddleware, roleMiddleware('admin'), async (req, res) => {
+  try {
+    const lastRecord = await Attendance.findOne({ user: req.params.userId })
+      .sort({ timestamp: -1 })
+      .select('type timestamp');
+
+    if (!lastRecord) {
+      return res.json({ type: 'None', timestamp: null });
+    }
+
+    res.json(lastRecord);
+  } catch (error) {
+    console.error('Last attendance error:', error);
+    res.status(500).json({ error: 'Failed to fetch last record' });
+  }
+});
+
+
+// GET all holidays
+app.get('/api/holidays', authMiddleware, async (req, res) => {
+  try {
+    const holidays = await Holiday.find().sort({ date: 1 });
+    res.json(holidays);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch holidays' });
+  }
+});
+
+// POST new holiday (admin only)
+app.post('/api/holidays', authMiddleware, roleMiddleware('admin'), async (req, res) => {
+  try {
+    const { date, name } = req.body;
+
+    if (!date || !name) {
+      return res.status(400).json({ error: 'Date and name are required' });
+    }
+
+    const existing = await Holiday.findOne({ date: new Date(date) });
+    if (existing) {
+      return res.status(409).json({ error: 'Holiday already exists for this date' });
+    }
+
+    const holiday = new Holiday({ date, name });
+    await holiday.save();
+    res.status(201).json(holiday);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to add holiday' });
+  }
+});
+
 
 // Get single user
 app.get('/users/:id', authMiddleware, roleMiddleware('admin'), async (req, res) => {

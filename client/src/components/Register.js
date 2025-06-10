@@ -5,8 +5,11 @@ import {
 } from 'react-icons/fi';
 import { API_ENDPOINTS } from '../utils/api';
 import Swal from 'sweetalert2';
+import { useNavigate } from 'react-router-dom';
 
 function Register() {
+
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -50,11 +53,15 @@ function Register() {
       });
 
       Swal.fire({
-        icon: 'success',
-        title: 'User Created!',
-        text: '🎉 Employee registered successfully!',
-        confirmButtonColor: '#6ca8a4'
-      });
+    icon: 'success',
+    title: 'User Created!',
+    text: 'Employee registered successfully!',
+    confirmButtonColor: '#6ca8a4'
+  });
+
+  setTimeout(() => {
+    navigate('/login');  // Redirect to login after successful registration
+  }, 3000);
 
       setFormData({
         name: '',

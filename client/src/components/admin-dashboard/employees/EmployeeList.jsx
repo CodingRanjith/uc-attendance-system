@@ -12,9 +12,7 @@ const EmployeeList = () => {
       try {
         const token = localStorage.getItem('token');
         const res = await axios.get(API_ENDPOINTS.getUsers, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+          headers: { Authorization: `Bearer ${token}` }
         });
         setEmployees(res.data || []);
       } catch (error) {
@@ -30,40 +28,39 @@ const EmployeeList = () => {
   if (loading) return <Loader />;
 
   return (
-    <div className="p-6 bg-white rounded shadow">
-      <h2 className="text-xl font-semibold text-gray-700 mb-4">All Employees</h2>
-      <div className="overflow-x-auto">
-        <table className="min-w-full text-sm text-left">
-          <thead className="bg-gray-100 text-gray-700 uppercase">
-            <tr>
-              <th className="px-4 py-3">Name</th>
-              <th className="px-4 py-3">Email</th>
-              <th className="px-4 py-3">Phone</th>
-              <th className="px-4 py-3">Position</th>
-              <th className="px-4 py-3">Company</th>
-              <th className="px-4 py-3">Role</th>
-            </tr>
-          </thead>
-          <tbody className="text-gray-800">
-            {employees.length === 0 ? (
+    <div className="p-6 bg-white rounded shadow-md border border-gray-200">
+      <h2 className="text-xl font-semibold text-gray-800 mb-4">All Employees</h2>
+
+      {employees.length === 0 ? (
+        <p className="text-gray-500 text-center py-6">No employees found.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm text-left border">
+            <thead className="bg-gray-100 text-gray-700 uppercase text-xs">
               <tr>
-                <td colSpan="6" className="px-4 py-6 text-center text-gray-500">No employees found.</td>
+                <th className="px-4 py-3">Name</th>
+                <th className="px-4 py-3">Email</th>
+                <th className="px-4 py-3">Phone</th>
+                <th className="px-4 py-3">Position</th>
+                <th className="px-4 py-3">Company</th>
+                <th className="px-4 py-3">Role</th>
               </tr>
-            ) : (
-              employees.map((emp) => (
+            </thead>
+            <tbody className="text-gray-800">
+              {employees.map((emp) => (
                 <tr key={emp._id} className="border-b hover:bg-gray-50">
-                  <td className="px-4 py-2">{emp.name}</td>
-                  <td className="px-4 py-2">{emp.email}</td>
-                  <td className="px-4 py-2">{emp.phone}</td>
-                  <td className="px-4 py-2">{emp.position}</td>
-                  <td className="px-4 py-2">{emp.company}</td>
-                  <td className="px-4 py-2 capitalize">{emp.role}</td>
+                  <td className="px-4 py-2">{emp.name || '-'}</td>
+                  <td className="px-4 py-2">{emp.email || '-'}</td>
+                  <td className="px-4 py-2">{emp.phone || '-'}</td>
+                  <td className="px-4 py-2">{emp.position || '-'}</td>
+                  <td className="px-4 py-2">{emp.company || '-'}</td>
+                  <td className="px-4 py-2 capitalize">{emp.role || 'employee'}</td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 };

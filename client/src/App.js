@@ -15,6 +15,9 @@ import Reports from './pages/admin/Reports';
 
 import AttendancePage from './pages/employee/AttendancePage';
 import EditUser from './components/EditUser';
+import PendingUsers from './pages/admin/PendingUsers';
+import AllUsers from './pages/admin/AllUsers';
+import Holidays from './pages/admin/Holidays'
 
 // Layout
 import Layout from './components/admin-dashboard/layout/Layout';
@@ -37,6 +40,10 @@ function App() {
           <Route path="/salary" element={<Salary />} />
           <Route path="/attendances" element={<Attendance />} />
           <Route path="/reports" element={<Reports />} />
+          <Route path="/pending-users" element={<PendingUsers />} />
+          <Route path="/all-users" element={<AllUsers />} />
+          <Route path="/holidays" element={<Holidays />} />
+
           {/* Add other admin routes here */}
           <Route path="/edit-user" element={<EditUser />} />
         </Route>

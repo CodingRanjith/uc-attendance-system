@@ -1,7 +1,7 @@
 // src/utils/api.js
-export const BASE_URL = 'https://uc-attendance-system.onrender.com';
+// export const BASE_URL = 'https://uc-attendance-system-1ts2.onrender.com';
 
-// export const BASE_URL = 'http://localhost:5000';
+export const BASE_URL = 'http://localhost:5000';
 
 export const API_ENDPOINTS = {
   // Auth
@@ -12,10 +12,12 @@ export const API_ENDPOINTS = {
   // Attendance
   postAttendance: `${BASE_URL}/attendance`,
   getMyAttendance: `${BASE_URL}/attendance/me`,
-  getLastAttendance: `${BASE_URL}/attendance/last`,
+  getLastAttendanceGlobal: `${BASE_URL}/attendance/last`,
   getAttendanceAll: `${BASE_URL}/attendance/all`,
   getAttendanceByDate: (date) => `${BASE_URL}/attendance/date/${date}`,
   getAttendanceByUser: (userId) => `${BASE_URL}/attendance/user/${userId}`,
+  getUserSummary: (userId, year, month) => `${BASE_URL}/attendance/user/${userId}/summary/${year}/${month}`,
+  getLastAttendanceByUser: (userId) => `${BASE_URL}/attendance/user/${userId}/last`,
 
   // Users
   getUsers: `${BASE_URL}/users`,
@@ -27,11 +29,21 @@ export const API_ENDPOINTS = {
   getAdminSummary: `${BASE_URL}/api/admin/summary`,
   getRecentAttendanceLogs: `${BASE_URL}/api/admin/recent-attendance`,
 
+  // Pending Users
+  pendingUsers: `${BASE_URL}/admin/pending-users`,
+  approveUser: `${BASE_URL}/admin/approve`,     // use like `${approveUser}/${userId}`
+  rejectUser: `${BASE_URL}/admin/reject`,       // use like `${rejectUser}/${userId}`
+
+  addHoliday: `${BASE_URL}/api/holidays`,
+  getHolidays: `${BASE_URL}/api/holidays`,
+
+
   // Misc
   uploadPath: `${BASE_URL}/uploads`,
 };
 
 
+ 
 
 export const getAttendanceAll = async () => {
   const response = await fetch(API_ENDPOINTS.getAttendanceAll);
