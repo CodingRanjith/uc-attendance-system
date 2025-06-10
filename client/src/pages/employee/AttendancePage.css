@@ -1,0 +1,17 @@
+.present-day {
+  background-color: #bbf7d0 !important; /* Tailwind green-200 */
+  color: #000 !important;               /* Dark font color */
+  border-radius: 6px;
+}
+
+.partial-present {
+  background-color: #fef08a !important; /* Tailwind yellow-200 */
+  color: #000 !important;
+  border-radius: 6px;
+}
+
+.absent-day {
+  background-color: #fecaca !important; /* Tailwind red-200 */
+  color: #000 !important;
+  border-radius: 6px;
+}

@@ -1,7 +1,7 @@
 // src/utils/api.js
-// export const BASE_URL = 'https://uc-attendance-system-1ts2.onrender.com';
+export const BASE_URL = 'https://uc-attendance-system-1ts2.onrender.com';
 
-export const BASE_URL = 'http://localhost:5000';
+// export const BASE_URL = 'http://localhost:5000';
 
 export const API_ENDPOINTS = {
   // Auth

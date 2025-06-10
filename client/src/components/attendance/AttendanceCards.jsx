@@ -29,7 +29,7 @@ function AttendanceCards({ attendanceData = [] }) {
       title: 'Check In',
       time: formatTime(checkIn?.timestamp),
       note: checkIn ? 'On Time' : 'Not Yet',
-      bgColor: 'bg-green-100',
+      bgColor: 'bg-green-100', 
       textColor: 'text-green-800',
     },
     {

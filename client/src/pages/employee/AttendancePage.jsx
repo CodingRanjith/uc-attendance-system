@@ -1,7 +1,12 @@
+// AttendancePage.js
+
 import React, { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
 import Swal from 'sweetalert2';
+import Calendar from 'react-calendar';
+import 'react-calendar/dist/Calendar.css';
+import './AttendancePage.css'; // 👈 Add this
 
 import { API_ENDPOINTS } from '../../utils/api';
 import ProfileHeader from '../../components/attendance/ProfileHeader';
@@ -21,6 +26,9 @@ function AttendancePage() {
   const [attendanceHistory, setAttendanceHistory] = useState([]);
   const [isCapturing, setIsCapturing] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [showCalendarModal, setShowCalendarModal] = useState(false);
+  const [calendarViewDate, setCalendarViewDate] = useState(new Date());
+
   const videoRef = useRef(null);
   const streamRef = useRef(null);
 
@@ -34,33 +42,33 @@ function AttendancePage() {
         company: decoded.company || ''
       });
     }
-
-    const fetchData = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        const res = await axios.get(API_ENDPOINTS.getMyAttendance, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setAttendanceHistory(res.data);
-
-        const today = new Date().toDateString();
-        const todayEntries = res.data.filter(
-          entry => new Date(entry.timestamp).toDateString() === today
-        );
-
-        if (todayEntries.length === 0) {
-          setType('check-in');
-        } else {
-          const last = todayEntries[todayEntries.length - 1];
-          setType(last.type === 'check-in' ? 'check-out' : null); // null if already checked out
-        }
-      } catch (err) {
-        Swal.fire({ icon: 'error', title: 'Fetch Error', text: 'Unable to load attendance history.' });
-      }
-    };
-
     fetchData();
   }, []);
+
+  const fetchData = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get(API_ENDPOINTS.getMyAttendance, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setAttendanceHistory(res.data);
+
+      const today = new Date().toDateString();
+      const todayEntries = res.data.filter(
+        entry => new Date(entry.timestamp).toDateString() === today
+      );
+
+      if (todayEntries.length === 0) {
+        setType('check-in');
+      } else if (todayEntries.length === 1 && todayEntries[0].type === 'check-in') {
+        setType('check-out');
+      } else {
+        setType(null);
+      }
+    } catch (err) {
+      Swal.fire({ icon: 'error', title: 'Fetch Error', text: 'Unable to load attendance history.' });
+    }
+  };
 
   const startCamera = async () => {
     try {
@@ -105,7 +113,7 @@ function AttendancePage() {
         setImage(URL.createObjectURL(compressed));
         setCompressedBlob(compressed);
         setCapturedTime(new Date());
-        getLocation(); // important
+        getLocation();
       } else {
         Swal.fire({ icon: 'error', title: 'Compression Failed' });
       }
@@ -132,53 +140,96 @@ function AttendancePage() {
       });
 
       Swal.fire('Success', `${type === 'check-in' ? 'Checked In' : 'Checked Out'} successfully`, 'success');
-
       setImage(null);
       setCompressedBlob(null);
       setLocation('');
       stopCamera();
-
-      // Refresh after submission
-      const res = await axios.get(API_ENDPOINTS.getMyAttendance, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-      });
-      setAttendanceHistory(res.data);
-
-      const today = new Date().toDateString();
-      const todayEntries = res.data.filter(
-        entry => new Date(entry.timestamp).toDateString() === today
-      );
-
-      if (todayEntries.length === 0) {
-        setType('check-in');
-      } else {
-        const last = todayEntries[todayEntries.length - 1];
-        setType(last.type === 'check-in' ? 'check-out' : null);
-      }
-
+      fetchData();
     } catch (err) {
       Swal.fire('Failed', 'Could not submit attendance', 'error');
     }
   };
 
+  const attendanceMap = {};
+  attendanceHistory.forEach((entry) => {
+    const dateKey = new Date(entry.timestamp).toDateString();
+    if (!attendanceMap[dateKey]) attendanceMap[dateKey] = { checkin: false, checkout: false };
+    if (entry.type === 'check-in') attendanceMap[dateKey].checkin = true;
+    if (entry.type === 'check-out') attendanceMap[dateKey].checkout = true;
+  });
+
   const filteredLogs = attendanceHistory.filter(
     (entry) => new Date(entry.timestamp).toDateString() === selectedDate.toDateString()
   );
 
+  const presentDays = Object.keys(attendanceMap).length;
+  const totalDays = new Date().getDate();
+  const absentDays = totalDays - presentDays;
+
   return (
     <div className="min-h-screen bg-gradient-to-tr from-lime-50 via-sky-50 to-pink-50 px-4 py-6 md:py-10 max-w-4xl mx-auto font-sans">
       <ProfileHeader name={user.name} position={user.position} company={user.company} />
+
+      <div className="mt-4 mb-4 flex justify-around text-sm font-medium text-gray-700">
+        <div>✅ Present: <span className="text-green-600">{presentDays}</span></div>
+        <div>❌ Absent: <span className="text-red-600">{absentDays}</span></div>
+        <div>📅 Total: <span className="text-blue-600">{totalDays}</span></div>
+      </div>
+
+      <div className="text-right mb-4">
+        <button
+          className="text-blue-600 underline hover:text-blue-800"
+          onClick={() => setShowCalendarModal(true)}
+        >
+          Open Calendar View
+        </button>
+      </div>
+
+      {showCalendarModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50">
+          <div className="bg-white p-6 rounded-xl shadow-lg max-w-md w-full relative">
+            <button
+              className="absolute top-2 right-2 text-gray-500 hover:text-black"
+              onClick={() => setShowCalendarModal(false)}
+            >
+              ✕
+            </button>
+           <h2 className="text-lg font-bold mb-4 text-center">
+               Attendance - {calendarViewDate.toLocaleString('default', { month: 'long' })} {calendarViewDate.getFullYear()}
+           </h2>
+
+            <Calendar
+  onChange={setSelectedDate}
+  value={selectedDate}
+  onActiveStartDateChange={({ activeStartDate }) => setCalendarViewDate(activeStartDate)}
+  tileClassName={({ date, view }) => {
+    if (view === 'month') {
+      const key = date.toDateString();
+      const record = attendanceMap[key];
+      if (record?.checkin && record?.checkout) return 'present-day';
+      if (record?.checkin && !record?.checkout) return 'partial-present';
+      if (!record) return 'absent-day';
+    }
+    return '';
+  }}
+/>
+
+            <div className="flex justify-around mt-4 text-sm">
+              <div className="flex items-center gap-2"><span className="w-4 h-4 bg-green-200 rounded"></span>Present</div>
+              <div className="flex items-center gap-2"><span className="w-4 h-4 bg-yellow-200 rounded"></span>Check-in Only</div>
+              <div className="flex items-center gap-2"><span className="w-4 h-4 bg-red-200 rounded"></span>Absent</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="mt-6">
         <DateStrip selectedDate={selectedDate} setSelectedDate={setSelectedDate} />
       </div>
 
       <div className="mt-8">
-        <h3 className="text-lg font-semibold text-gray-700 mb-3">Today Attendance</h3>
+        <h3 className="text-lg font-semibold text-gray-700 mb-3">Selected Date Logs</h3>
         <AttendanceCards attendanceData={attendanceHistory} />
-      </div>
-
-      <div className="mt-8">
         <ActivityLog activities={filteredLogs} />
       </div>
 
@@ -217,21 +268,16 @@ function AttendancePage() {
                 {capturedTime && (
                   <div className="text-sm text-gray-600 mt-2 space-y-1">
                     <p><span className="font-medium">Captured at:</span> {capturedTime.toLocaleTimeString()} on {capturedTime.toLocaleDateString()}</p>
-                    {location && (
-                      <p><span className="font-medium">Location:</span> {location}</p>
-                    )}
+                    {location && <p><span className="font-medium">Location:</span> {location}</p>}
                   </div>
                 )}
                 <div className="flex justify-between mt-4">
-                  <button
-                    onClick={() => {
-                      URL.revokeObjectURL(image);
-                      setImage(null);
-                      setCompressedBlob(null);
-                      startCamera();
-                    }}
-                    className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg"
-                  >
+                  <button onClick={() => {
+                    URL.revokeObjectURL(image);
+                    setImage(null);
+                    setCompressedBlob(null);
+                    startCamera();
+                  }} className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg">
                     Retake
                   </button>
                   <button onClick={submitAttendance} className="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-lg">
