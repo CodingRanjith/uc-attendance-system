@@ -1,12 +1,11 @@
-// AttendancePage.js
-
 import React, { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
 import Swal from 'sweetalert2';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
-import './AttendancePage.css'; // 👈 Add this
+import './AttendancePage.css';
+import { useNavigate } from 'react-router-dom';
 
 import { API_ENDPOINTS } from '../../utils/api';
 import ProfileHeader from '../../components/attendance/ProfileHeader';
@@ -14,9 +13,11 @@ import DateStrip from '../../components/attendance/DateStrip';
 import AttendanceCards from '../../components/attendance/AttendanceCards';
 import ActivityLog from '../../components/attendance/ActivityLog';
 import CameraView from '../../components/attendance/CameraView';
+import PromoTimer from '../../components/attendance/PromoTimer';
 import { compressImage } from '../../components/attendance/utils';
 
 function AttendancePage() {
+  const navigate = useNavigate();
   const [user, setUser] = useState({ name: '', position: '', company: '' });
   const [type, setType] = useState(null);
   const [image, setImage] = useState(null);
@@ -99,7 +100,6 @@ function AttendancePage() {
 
   const captureImage = async () => {
     if (!videoRef.current) return;
-
     const canvas = document.createElement('canvas');
     canvas.width = videoRef.current.videoWidth;
     canvas.height = videoRef.current.videoHeight;
@@ -166,6 +166,13 @@ function AttendancePage() {
   const totalDays = new Date().getDate();
   const absentDays = totalDays - presentDays;
 
+  
+  const onLogout = () => {
+  localStorage.removeItem('token');
+  navigate('/login');
+};
+
+
   return (
     <div className="min-h-screen bg-gradient-to-tr from-lime-50 via-sky-50 to-pink-50 px-4 py-6 md:py-10 max-w-4xl mx-auto font-sans">
       <ProfileHeader name={user.name} position={user.position} company={user.company} />
@@ -176,14 +183,41 @@ function AttendancePage() {
         <div>📅 Total: <span className="text-blue-600">{totalDays}</span></div>
       </div>
 
-      <div className="text-right mb-4">
+<div className="flex flex-col md:flex-row md:justify-between items-stretch md:items-center gap-3 mb-4">
+      {/* Left button group */}
+      <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
         <button
-          className="text-blue-600 underline hover:text-blue-800"
-          onClick={() => setShowCalendarModal(true)}
+          onClick={() => navigate('/apply-leave')}
+          className="bg-yellow-500 text-white px-4 py-2 rounded shadow hover:bg-yellow-600 w-full sm:w-auto"
         >
-          Open Calendar View
+          📝 Apply Leave
         </button>
+        <button
+          onClick={() => navigate('/task-manager')}
+          className="bg-green-600 text-white px-4 py-2 rounded shadow hover:bg-green-700 w-full sm:w-auto"
+        >
+          🗂 Task Manager
+        </button>
+        <button
+        className="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 w-full md:w-auto"
+        onClick={() => setShowCalendarModal(true)}
+      >
+        📅 Open Calendar View
+      </button>
+        
       </div>
+
+      {/* Right calendar view button */}
+      <button
+          onClick={onLogout}
+          className="bg-red-500 text-white px-4 py-2 rounded shadow hover:bg-red-600 w-full sm:w-auto"
+        >
+          🔒 Logout
+        </button>
+    </div>
+
+    {/* Promo Timer & Tasks */}
+      <PromoTimer initialMinutes={1} />
 
       {showCalendarModal && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50">
@@ -194,26 +228,24 @@ function AttendancePage() {
             >
               ✕
             </button>
-           <h2 className="text-lg font-bold mb-4 text-center">
-               Attendance - {calendarViewDate.toLocaleString('default', { month: 'long' })} {calendarViewDate.getFullYear()}
-           </h2>
-
+            <h2 className="text-lg font-bold mb-4 text-center">
+              Attendance - {calendarViewDate.toLocaleString('default', { month: 'long' })} {calendarViewDate.getFullYear()}
+            </h2>
             <Calendar
-  onChange={setSelectedDate}
-  value={selectedDate}
-  onActiveStartDateChange={({ activeStartDate }) => setCalendarViewDate(activeStartDate)}
-  tileClassName={({ date, view }) => {
-    if (view === 'month') {
-      const key = date.toDateString();
-      const record = attendanceMap[key];
-      if (record?.checkin && record?.checkout) return 'present-day';
-      if (record?.checkin && !record?.checkout) return 'partial-present';
-      if (!record) return 'absent-day';
-    }
-    return '';
-  }}
-/>
-
+              onChange={setSelectedDate}
+              value={selectedDate}
+              onActiveStartDateChange={({ activeStartDate }) => setCalendarViewDate(activeStartDate)}
+              tileClassName={({ date, view }) => {
+                if (view === 'month') {
+                  const key = date.toDateString();
+                  const record = attendanceMap[key];
+                  if (record?.checkin && record?.checkout) return 'present-day';
+                  if (record?.checkin && !record?.checkout) return 'partial-present';
+                  if (!record) return 'absent-day';
+                }
+                return '';
+              }}
+            />
             <div className="flex justify-around mt-4 text-sm">
               <div className="flex items-center gap-2"><span className="w-4 h-4 bg-green-200 rounded"></span>Present</div>
               <div className="flex items-center gap-2"><span className="w-4 h-4 bg-yellow-200 rounded"></span>Check-in Only</div>
@@ -228,10 +260,12 @@ function AttendancePage() {
       </div>
 
       <div className="mt-8">
-        <h3 className="text-lg font-semibold text-gray-700 mb-3">Selected Date Logs</h3>
+        <h3 className="text-lg font-semibold text-gray-700 mb-3">Today Attendance</h3>
         <AttendanceCards attendanceData={attendanceHistory} />
         <ActivityLog activities={filteredLogs} />
       </div>
+
+      
 
       {type && !isCapturing && (
         <div className="fixed bottom-6 left-6 right-6 flex justify-center z-30">

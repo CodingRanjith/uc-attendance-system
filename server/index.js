@@ -11,6 +11,8 @@ const haversine = require('haversine-distance');
 const officeLocation = require('./config/officeLocation');
 const PendingUser = require('./models/PendingUser');
 const Holiday = require('./models/Holiday');
+const LeaveRequest = require('./models/LeaveRequest');
+const Task = require('./models/Task');
 
 const app = express();
 app.use(cors());
@@ -89,6 +91,135 @@ app.post('/register', async (req, res) => {
 });
 
 
+// -------------------------------------------
+// 📝 Daily Task APIs
+// -------------------------------------------
+
+// ✅ GET tasks by date (e.g., /api/tasks/2025-06-11)
+app.get('/api/tasks/:date', authMiddleware, async (req, res) => {
+  try {
+    const tasks = await Task.find({
+      user: req.user._id,
+      date: req.params.date,
+    }).sort({ createdAt: -1 });
+    res.json(tasks);
+  } catch (error) {
+    console.error('Fetch task error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ✅ POST new task
+app.post('/api/tasks', authMiddleware, async (req, res) => {
+  const { task, date } = req.body;
+  if (!task || !date) return res.status(400).json({ error: 'Task and date are required' });
+
+  try {
+    const newTask = new Task({ user: req.user._id, task, date });
+    await newTask.save();
+    res.status(201).json(newTask);
+  } catch (error) {
+    console.error('Add task error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ✅ PATCH update task status
+app.patch('/api/tasks/:id', authMiddleware, async (req, res) => {
+  const { done } = req.body;
+  try {
+    const updated = await Task.findOneAndUpdate(
+      { _id: req.params.id, user: req.user._id },
+      { done },
+      { new: true }
+    );
+    if (!updated) return res.status(404).json({ error: 'Task not found' });
+    res.json(updated);
+  } catch (error) {
+    console.error('Update task error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ✅ DELETE /api/tasks/:id - Delete a task
+app.delete('/api/tasks/:id', authMiddleware, async (req, res) => {
+  try {
+    const deleted = await Task.findOneAndDelete({ _id: req.params.id, user: req.user._id });
+    if (!deleted) return res.status(404).json({ error: 'Task not found' });
+    res.json({ message: 'Task deleted successfully' });
+  } catch (error) {
+    console.error('Delete task error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.put('/api/tasks/:id', authMiddleware, async (req, res) => {
+  const { task, date } = req.body;
+  if (!task || !date) return res.status(400).json({ error: 'Task and date are required' });
+
+  try {
+    const updated = await Task.findOneAndUpdate(
+      { _id: req.params.id, user: req.user._id },
+      { task, date },
+      { new: true }
+    );
+    if (!updated) return res.status(404).json({ error: 'Task not found' });
+    res.json(updated);
+  } catch (error) {
+    console.error('Update full task error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+ 
+
+app.get('/api/tasks/month/:year/:month', authMiddleware, async (req, res) => {
+  try {
+    const { year, month } = req.params;
+    const start = new Date(`${year}-${month}-01`);
+    const end = new Date(start);
+    end.setMonth(end.getMonth() + 1);
+
+    const tasks = await Task.find({
+      user: req.user._id,
+      date: { $gte: start.toISOString().split('T')[0], $lt: end.toISOString().split('T')[0] },
+    });
+
+    res.json(tasks);
+  } catch (err) {
+    console.error('Fetch monthly tasks error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ✅ Updated summary endpoint to support filtering by date
+app.get('/api/tasks/summary', authMiddleware, async (req, res) => {
+  try {
+    const { date } = req.query;
+    const filter = { user: req.user._id };
+
+    if (date) {
+      filter.date = date; // e.g., 2025-06-11
+    }
+
+    const total = await Task.countDocuments(filter);
+    const done = await Task.countDocuments({ ...filter, done: true });
+    const pending = total - done;
+
+    res.json({ total, done, pending });
+  } catch (error) {
+    console.error('Summary error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
+
+
+
+
+
+
 app.post('/admin/approve/:id', authMiddleware, roleMiddleware('admin'), async (req, res) => {
   try {
     const pending = await PendingUser.findById(req.params.id);
@@ -132,6 +263,78 @@ app.get('/admin/pending-users', authMiddleware, roleMiddleware('admin'), async (
     res.json(pendingUsers);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch pending users' });
+  }
+});
+
+
+// Apply for leave (employee)
+app.post('/api/leaves/apply', authMiddleware, async (req, res) => {
+  try {
+    const { fromDate, toDate, reason, leaveType } = req.body;
+    if (!fromDate || !toDate || !reason) {
+      return res.status(400).json({ error: 'Missing fields' });
+    }
+
+    const leave = new LeaveRequest({
+      user: req.user._id,
+      fromDate,
+      toDate,
+      reason,
+      leaveType
+    });
+
+    await leave.save();
+    res.status(201).json({ message: 'Leave request submitted' });
+  } catch (err) {
+    console.error('Leave apply error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get all leave requests (admin)
+app.get('/api/leaves/all', authMiddleware, roleMiddleware('admin'), async (req, res) => {
+  try {
+    const requests = await LeaveRequest.find().populate('user', 'name email');
+    res.json(requests);
+  } catch (err) {
+    console.error('Fetch leave requests error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Update leave request status (admin)
+app.patch('/api/leaves/:id', authMiddleware, roleMiddleware('admin'), async (req, res) => {
+  try {
+    const { status } = req.body;
+    if (!['Approved', 'Rejected'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+
+    const updated = await LeaveRequest.findByIdAndUpdate(
+      req.params.id,
+      { status },
+      { new: true }
+    );
+
+    if (!updated) {
+      return res.status(404).json({ error: 'Leave request not found' });
+    }
+
+    res.json({ message: `Leave ${status.toLowerCase()}`, request: updated });
+  } catch (err) {
+    console.error('Update leave error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get logged-in user's leave requests
+app.get('/api/leaves/me', authMiddleware, async (req, res) => {
+  try {
+    const leaves = await LeaveRequest.find({ user: req.user._id }).sort({ createdAt: -1 });
+    res.json(leaves);
+  } catch (err) {
+    console.error('Fetch my leaves error:', err);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 

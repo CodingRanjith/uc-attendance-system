@@ -14,10 +14,12 @@ import Reports from './pages/admin/Reports';
 
 
 import AttendancePage from './pages/employee/AttendancePage';
+import Leave from './pages/employee/ApplyLeaveForm';
 import EditUser from './components/EditUser';
 import PendingUsers from './pages/admin/PendingUsers';
 import AllUsers from './pages/admin/AllUsers';
-import Holidays from './pages/admin/Holidays'
+import Holidays from './pages/admin/Holidays';
+import TaskManagerPage from './pages/employee/TaskManagerPage';
 
 // Layout
 import Layout from './components/admin-dashboard/layout/Layout';
@@ -32,6 +34,8 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/attendance" element={<AttendancePage />} />
+        <Route path="/apply-leave" element={<Leave />} />
+        <Route path="/task-manager" element={<TaskManagerPage />} />
 
         {/* Protected Admin Layout Wrapper */}
         <Route element={<Layout />}>
