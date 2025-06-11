@@ -18,6 +18,9 @@ export const API_ENDPOINTS = {
   updateUser: (userId) => `${BASE_URL}/users/${userId}`,
   updateSalary: (userId) => `${BASE_URL}/users/${userId}/salary`,
   getCurrentUser: `${BASE_URL}/users/me`,
+  getUserById: (id) => `${BASE_URL}/users/${id}`,
+  getAttendanceByUser: (id) => `${BASE_URL}/attendance/user/${id}`,
+
 
   // -----------------
   // Attendance APIs

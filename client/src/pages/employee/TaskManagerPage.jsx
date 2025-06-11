@@ -7,14 +7,13 @@ import { API_ENDPOINTS } from '../../utils/api';
 import { useNavigate } from 'react-router-dom';
 
 const TaskManagerPage = () => {
-    const navigate = useNavigate();
+  const navigate = useNavigate();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [tasks, setTasks] = useState([]);
   const [newTask, setNewTask] = useState('');
   const [summary, setSummary] = useState({ total: 0, done: 0, pending: 0 });
 
-  const formattedDate = selectedDate.toLocaleDateString('en-CA');
-   // e.g., 2025-06-11
+  const formattedDate = selectedDate.toISOString().split('T')[0];
 
   const fetchTasks = useCallback(async () => {
     try {
@@ -28,30 +27,22 @@ const TaskManagerPage = () => {
     }
   }, [formattedDate]);
 
-const fetchSummary = async () => {
-  try {
-    const token = localStorage.getItem('token');
-    const res = await axios.get(`${API_ENDPOINTS.getTaskSummary}?date=${formattedDate}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    console.log("📊 summary res:", res.data);
-    setSummary(res.data);
-  } catch (err) {
-    console.error('Summary fetch failed:', err);
-  }
-};
-
-
+  const fetchSummary = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get(API_ENDPOINTS.getTaskSummary, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setSummary(res.data);
+    } catch (err) {
+      console.error('Summary fetch failed:', err);
+    }
+  }, []);
 
   useEffect(() => {
-  fetchTasks();
-  fetchSummary();
-}, [formattedDate]);
-
-useEffect(() => {
-  console.log('📊 Summary:', summary);
-}, [summary]);
-
+    fetchTasks();
+    fetchSummary();
+  }, [fetchTasks, fetchSummary]);
 
   const addTask = async () => {
     if (!newTask.trim()) return;
@@ -99,61 +90,54 @@ useEffect(() => {
   };
 
   const updateTask = async (id, currentName) => {
-  const { value: updatedName } = await Swal.fire({
-    title: 'Edit Task',
-    input: 'text',
-    inputValue: currentName,
-    showCancelButton: true,
-    confirmButtonText: 'Update',
-  });
-
-  if (!updatedName || updatedName.trim() === currentName.trim()) return;
-
-  try {
-    const token = localStorage.getItem('token');
-    await axios.put(API_ENDPOINTS.updateFullTask(id), {
-      task: updatedName,
-      date: formattedDate
-    }, {
-      headers: { Authorization: `Bearer ${token}` }
+    const { value: updatedName } = await Swal.fire({
+      title: 'Edit Task',
+      input: 'text',
+      inputValue: currentName,
+      showCancelButton: true,
+      confirmButtonText: 'Update',
     });
 
-    fetchTasks();
-    fetchSummary(); // ✅ Refresh summary after update
-  } catch (err) {
-    Swal.fire('Error', 'Failed to update task.', 'error');
-  }
-};
+    if (!updatedName || updatedName.trim() === currentName.trim()) return;
 
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(
+        API_ENDPOINTS.updateFullTask(id),
+        { task: updatedName, date: formattedDate },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      fetchTasks();
+      fetchSummary();
+    } catch (err) {
+      Swal.fire('Error', 'Failed to update task.', 'error');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-tr from-pink-50 via-yellow-50 to-sky-50 py-10 px-4 font-sans">
-        <div className="flex justify-between">
-            <button
-              type="button"
-              onClick={() => navigate('/attendance')}
-              className="bg-gray-200 text-gray-800 px-5 py-2 rounded-xl hover:bg-gray-300 transition"
-            >
-              Back
-            </button>
-          </div>
+      <div className="flex justify-between">
+        <button
+          type="button"
+          onClick={() => navigate('/attendance')}
+          className="bg-gray-200 text-gray-800 px-5 py-2 rounded-xl hover:bg-gray-300 transition"
+        >
+          Back
+        </button>
+      </div>
       <h1 className="text-3xl font-bold text-center mb-6 text-indigo-700">🗓️ Task Manager</h1>
 
       <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Calendar */}
         <div className="bg-white rounded-xl shadow-lg p-4">
           <Calendar onChange={setSelectedDate} value={selectedDate} className="rounded" />
           <div className="mt-4 space-y-2 text-sm text-gray-600">
-  <div>📅 Selected: <strong>{formattedDate}</strong></div>
-  <div>✅ Done: <strong>{summary.done}</strong></div>
-  <div>📌 Pending: <strong>{summary.pending}</strong></div>
-  <div>📊 Total: <strong>{summary.total}</strong></div>
-</div>
-
-
+            <div>📅 Selected: <strong>{formattedDate}</strong></div>
+            <div>✅ Done: <strong>{summary.done}</strong></div>
+            <div>📌 Pending: <strong>{summary.pending}</strong></div>
+            <div>📊 Total: <strong>{summary.total}</strong></div>
+          </div>
         </div>
 
-        {/* Task List */}
         <div className="bg-white rounded-xl shadow-lg p-6">
           <h2 className="text-xl font-semibold text-gray-700 mb-4">Tasks for {formattedDate}</h2>
 

@@ -5,7 +5,7 @@ import Swal from 'sweetalert2';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import './AttendancePage.css';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 
 import { API_ENDPOINTS } from '../../utils/api';
 import ProfileHeader from '../../components/attendance/ProfileHeader';
@@ -18,6 +18,9 @@ import { compressImage } from '../../components/attendance/utils';
 
 function AttendancePage() {
   const navigate = useNavigate();
+  const { userId } = useParams();
+  const isSelf = !userId;
+
   const [user, setUser] = useState({ name: '', position: '', company: '' });
   const [type, setType] = useState(null);
   const [image, setImage] = useState(null);
@@ -34,41 +37,60 @@ function AttendancePage() {
   const streamRef = useRef(null);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      const decoded = jwtDecode(token);
-      setUser({
-        name: decoded.name || 'User',
-        position: decoded.position || '',
-        company: decoded.company || ''
-      });
-    }
-    fetchData();
-  }, []);
+    fetchUser();
+    fetchAttendance();
+  }, [userId]);
 
-  const fetchData = async () => {
+  const fetchUser = async () => {
+    const token = localStorage.getItem('token');
     try {
-      const token = localStorage.getItem('token');
-      const res = await axios.get(API_ENDPOINTS.getMyAttendance, {
-        headers: { Authorization: `Bearer ${token}` },
+      const res = await axios.get(
+        isSelf ? API_ENDPOINTS.getCurrentUser : API_ENDPOINTS.getUserById(userId),
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setUser({
+        name: res.data.name,
+        position: res.data.position,
+        company: res.data.company,
       });
+    } catch (err) {
+      Swal.fire({ icon: 'error', title: 'Error', text: 'Unable to load user info' });
+    }
+  };
+
+  const fetchAttendance = async () => {
+    const token = localStorage.getItem('token');
+    try {
+      const res = await axios.get(
+        isSelf ? API_ENDPOINTS.getMyAttendance : API_ENDPOINTS.getAttendanceByUser(userId),
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       setAttendanceHistory(res.data);
 
       const today = new Date().toDateString();
       const todayEntries = res.data.filter(
-        entry => new Date(entry.timestamp).toDateString() === today
+        (entry) => new Date(entry.timestamp).toDateString() === today
       );
 
-      if (todayEntries.length === 0) {
-        setType('check-in');
-      } else if (todayEntries.length === 1 && todayEntries[0].type === 'check-in') {
-        setType('check-out');
-      } else {
-        setType(null);
+      if (isSelf) {
+        if (todayEntries.length === 0) {
+          setType('check-in');
+        } else if (todayEntries.length === 1 && todayEntries[0].type === 'check-in') {
+          setType('check-out');
+        } else {
+          setType(null);
+        }
       }
     } catch (err) {
-      Swal.fire({ icon: 'error', title: 'Fetch Error', text: 'Unable to load attendance history.' });
+      Swal.fire({ icon: 'error', title: 'Error', text: 'Unable to load attendance data' });
     }
+  };
+
+  const getLocation = () => {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => setLocation(`${pos.coords.latitude},${pos.coords.longitude}`),
+      () => Swal.fire({ icon: 'error', title: 'Location Error', text: 'Please enable GPS to proceed.' })
+    );
   };
 
   const startCamera = async () => {
@@ -85,17 +107,10 @@ function AttendancePage() {
 
   const stopCamera = () => {
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
     setIsCapturing(false);
-  };
-
-  const getLocation = () => {
-    navigator.geolocation.getCurrentPosition(
-      (pos) => setLocation(`${pos.coords.latitude},${pos.coords.longitude}`),
-      () => Swal.fire({ icon: 'error', title: 'Location Error', text: 'Please enable GPS to proceed.' })
-    );
   };
 
   const captureImage = async () => {
@@ -105,7 +120,7 @@ function AttendancePage() {
     canvas.height = videoRef.current.videoHeight;
     canvas.getContext('2d').drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
 
-    canvas.toBlob(async blob => {
+    canvas.toBlob(async (blob) => {
       if (!blob) return;
       const file = new File([blob], 'attendance.jpg', { type: 'image/jpeg' });
       const compressed = await compressImage(file);
@@ -144,10 +159,15 @@ function AttendancePage() {
       setCompressedBlob(null);
       setLocation('');
       stopCamera();
-      fetchData();
+      fetchAttendance();
     } catch (err) {
       Swal.fire('Failed', 'Could not submit attendance', 'error');
     }
+  };
+
+  const onLogout = () => {
+    localStorage.removeItem('token');
+    navigate('/login');
   };
 
   const attendanceMap = {};
@@ -166,13 +186,6 @@ function AttendancePage() {
   const totalDays = new Date().getDate();
   const absentDays = totalDays - presentDays;
 
-  
-  const onLogout = () => {
-  localStorage.removeItem('token');
-  navigate('/login');
-};
-
-
   return (
     <div className="min-h-screen bg-gradient-to-tr from-lime-50 via-sky-50 to-pink-50 px-4 py-6 md:py-10 max-w-4xl mx-auto font-sans">
       <ProfileHeader name={user.name} position={user.position} company={user.company} />
@@ -183,49 +196,29 @@ function AttendancePage() {
         <div>📅 Total: <span className="text-blue-600">{totalDays}</span></div>
       </div>
 
-<div className="flex flex-col md:flex-row md:justify-between items-stretch md:items-center gap-3 mb-4">
-      {/* Left button group */}
-      <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
-        <button
-          onClick={() => navigate('/apply-leave')}
-          className="bg-yellow-500 text-white px-4 py-2 rounded shadow hover:bg-yellow-600 w-full sm:w-auto"
-        >
-          📝 Apply Leave
-        </button>
-        <button
-          onClick={() => navigate('/task-manager')}
-          className="bg-green-600 text-white px-4 py-2 rounded shadow hover:bg-green-700 w-full sm:w-auto"
-        >
-          🗂 Task Manager
-        </button>
-        <button
-        className="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 w-full md:w-auto"
-        onClick={() => setShowCalendarModal(true)}
-      >
-        📅 Open Calendar View
-      </button>
-        
-      </div>
-
-      {/* Right calendar view button */}
-      <button
-          onClick={onLogout}
-          className="bg-red-500 text-white px-4 py-2 rounded shadow hover:bg-red-600 w-full sm:w-auto"
-        >
+      <div className="flex flex-col md:flex-row md:justify-between items-stretch md:items-center gap-3 mb-4">
+        <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+          <button onClick={() => navigate('/apply-leave')} className="bg-yellow-500 text-white px-4 py-2 rounded shadow hover:bg-yellow-600 w-full sm:w-auto">
+            📝 Apply Leave
+          </button>
+          <button onClick={() => navigate('/task-manager')} className="bg-green-600 text-white px-4 py-2 rounded shadow hover:bg-green-700 w-full sm:w-auto">
+            🗂 Task Manager
+          </button>
+          <button onClick={() => setShowCalendarModal(true)} className="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 w-full sm:w-auto">
+            📅 Open Calendar View
+          </button>
+        </div>
+        <button onClick={onLogout} className="bg-red-500 text-white px-4 py-2 rounded shadow hover:bg-red-600 w-full sm:w-auto">
           🔒 Logout
         </button>
-    </div>
+      </div>
 
-    {/* Promo Timer & Tasks */}
       <PromoTimer initialMinutes={1} />
 
       {showCalendarModal && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50">
           <div className="bg-white p-6 rounded-xl shadow-lg max-w-md w-full relative">
-            <button
-              className="absolute top-2 right-2 text-gray-500 hover:text-black"
-              onClick={() => setShowCalendarModal(false)}
-            >
+            <button className="absolute top-2 right-2 text-gray-500 hover:text-black" onClick={() => setShowCalendarModal(false)}>
               ✕
             </button>
             <h2 className="text-lg font-bold mb-4 text-center">
@@ -265,9 +258,7 @@ function AttendancePage() {
         <ActivityLog activities={filteredLogs} />
       </div>
 
-      
-
-      {type && !isCapturing && (
+      {isSelf && type && !isCapturing && (
         <div className="fixed bottom-6 left-6 right-6 flex justify-center z-30">
           <button
             onClick={() => {

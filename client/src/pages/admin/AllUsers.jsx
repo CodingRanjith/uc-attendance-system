@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { API_ENDPOINTS } from '../../utils/api';
-import UserDetailModal from '../../components/admin-dashboard/employees/UserDetailModal';
+import { useNavigate } from 'react-router-dom';
 
 const AllUsers = () => {
   const [users, setUsers] = useState([]);
-  const [selectedUser, setSelectedUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     async function fetchUsers() {
@@ -37,7 +37,7 @@ const AllUsers = () => {
           {users.map((user) => (
             <div
               key={user._id}
-              onClick={() => setSelectedUser(user)}
+              onClick={() => navigate(`/attendance/${user._id}`)}
               className="cursor-pointer bg-white p-5 shadow-md rounded-xl hover:shadow-lg transition duration-300"
             >
               <h2 className="text-xl font-semibold text-gray-800">{user.name}</h2>
@@ -46,10 +46,6 @@ const AllUsers = () => {
             </div>
           ))}
         </div>
-      )}
-
-      {selectedUser && (
-        <UserDetailModal user={selectedUser} onClose={() => setSelectedUser(null)} />
       )}
     </div>
   );
