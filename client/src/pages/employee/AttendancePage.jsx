@@ -13,7 +13,6 @@ import DateStrip from '../../components/attendance/DateStrip';
 import AttendanceCards from '../../components/attendance/AttendanceCards';
 import ActivityLog from '../../components/attendance/ActivityLog';
 import CameraView from '../../components/attendance/CameraView';
-import PromoTimer from '../../components/attendance/PromoTimer';
 import { compressImage } from '../../components/attendance/utils';
 
 function AttendancePage() {
@@ -54,7 +53,7 @@ function AttendancePage() {
         company: res.data.company,
       });
     } catch (err) {
-      Swal.fire({ icon: 'error', title: 'Error', text: 'Unable to load user info' });
+      // Swal.fire({ icon: 'error', title: 'Error', text: 'Unable to load user info' });
     }
   };
 
@@ -212,8 +211,6 @@ function AttendancePage() {
           🔒 Logout
         </button>
       </div>
-
-      <PromoTimer initialMinutes={1} />
 
       {showCalendarModal && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50">

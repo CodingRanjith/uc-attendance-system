@@ -5,6 +5,7 @@ import axios from 'axios';
 import Swal from 'sweetalert2';
 import { API_ENDPOINTS } from '../../utils/api';
 import { useNavigate } from 'react-router-dom';
+import PromoTimer from '../../components/attendance/PromoTimer';
 
 const TaskManagerPage = () => {
   const navigate = useNavigate();
@@ -198,6 +199,8 @@ const TaskManagerPage = () => {
           )}
         </div>
       </div>
+
+      <PromoTimer initialMinutes={1} />
     </div>
   );
 };
