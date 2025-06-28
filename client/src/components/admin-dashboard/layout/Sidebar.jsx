@@ -12,10 +12,12 @@ import {
   FiClock,
   FiUploadCloud,
   FiFile,
-  FiFileMinus
+  FiFileMinus,
+  FiCamera
 } from 'react-icons/fi';
 
 const menuItems = [
+  { label: 'Reports', icon: <FiCamera/>, path: '/admin' }, // ✅ Admin Dashboar
   { label: 'Dashboard', icon: <FiHome />, path: '/dashboard' },
   { label: 'All Employees', icon: <FiUsers />, path: '/employees' },
   { label: 'All Users (Cards)', icon: <FiUsers />, path: '/all-users' }, // ✅ New Card View Page

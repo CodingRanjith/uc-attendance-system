@@ -17,7 +17,7 @@ import {
   FiHome,
   FiUsers,
   FiCheckSquare,
-  FiImage,
+  // FiImage,
   FiMenu,
   FiChevronRight,
   FiX
@@ -230,12 +230,12 @@ const Dashboard = () => {
   }`}
   onClick={() => setSelectedEmployee('all')}
 >
-  <div className="flex-shrink-0 h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
+  {/* <div className="flex-shrink-0 h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
     <FiUsers className="text-gray-500" />
-  </div>
-  {sidebarOpen && (
+  </div> */}
+  {/* {sidebarOpen && (
     <div className="ml-3 text-sm font-medium text-gray-700">All Employees</div>
-  )}
+  )} */}
 </div>
 
 
@@ -395,7 +395,7 @@ const Dashboard = () => {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Image</th>
+                    {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Image</th> */}
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
@@ -406,9 +406,9 @@ const Dashboard = () => {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {employeeGroupedData.map((group) => (
                     <tr key={group.date} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      {/* <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex space-x-2">
-                          {/* Check-in Image */}
+                      
                           <div className="flex flex-col items-center">
                             <span className="text-xs text-gray-500 mb-1">Check-in</span>
                             <div className="h-12 w-12 rounded-md overflow-hidden border border-gray-200">
@@ -434,7 +434,7 @@ const Dashboard = () => {
                             </div>
                           </div>
                           
-                          {/* Check-out Image */}
+                         
                           {group.checkOut && (
                             <div className="flex flex-col items-center">
                               <span className="text-xs text-gray-500 mb-1">Check-out</span>
@@ -462,7 +462,7 @@ const Dashboard = () => {
                             </div>
                           )}
                         </div>
-                      </td>
+                      </td> */}
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex flex-col space-y-1">
                           {group.checkIn && (
@@ -681,8 +681,10 @@ const Dashboard = () => {
                     <tr key={`${group.user?._id || 'unknown'}-${group.date}`} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex space-x-2">
+
+                          
                           {/* Check-in Image */}
-                          <div className="flex flex-col items-center">
+                          {/* <div className="flex flex-col items-center">
                             <span className="text-xs text-gray-500 mb-1">Check-in</span>
                             <div className="h-12 w-12 rounded-md overflow-hidden border border-gray-200">
                               {group.checkIn?.image ? (
@@ -705,10 +707,10 @@ const Dashboard = () => {
                                 </div>
                               )}
                             </div>
-                          </div>
+                          </div> */}
                           
                           {/* Check-out Image */}
-                          {group.checkOut && (
+                          {/* {group.checkOut && (
                             <div className="flex flex-col items-center">
                               <span className="text-xs text-gray-500 mb-1">Check-out</span>
                               <div className="h-12 w-12 rounded-md overflow-hidden border border-gray-200">
@@ -733,7 +735,7 @@ const Dashboard = () => {
                                 )}
                               </div>
                             </div>
-                          )}
+                          )} */}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -747,7 +749,7 @@ const Dashboard = () => {
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      {/* <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex flex-col space-y-1">
                           {group.checkIn && (
                             <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
@@ -760,7 +762,7 @@ const Dashboard = () => {
                             </span>
                           )}
                         </div>
-                      </td>
+                      </td> */}
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {formatDate(group.checkIn?.timestamp || group.checkOut?.timestamp)}
                       </td>

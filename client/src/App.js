@@ -1,6 +1,10 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 
+
+// Savitha Admnin Dashboard
+import DashSavi from './pages/Dashboard';
+
 // Public Pages
 import Login from './components/Login';
 import Register from './components/Register';
@@ -40,6 +44,7 @@ function App() {
 
         {/* Protected Admin Layout Wrapper */}
         <Route element={<Layout />}>
+          <Route path="/admin" element={<DashSavi />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/employees" element={<Employees />} />
           <Route path="/salary" element={<Salary />} />
