@@ -23,7 +23,8 @@ const menuItems = [
   { label: 'All Users (Cards)', icon: <FiUsers />, path: '/all-users' }, // ✅ New Card View Page
   { label: 'Pending Approvals', icon: <FiUsers />, path: '/pending-users' },
   { label: 'Daily Attendance', icon: <FiCalendar />, path: '/attendances' },
-  { label: 'Working Days Summary', icon: <FiBarChart2 />, path: '/reports' },
+  { label: 'Days Summary', icon: <FiBarChart2 />, path: 'daily-summary' },
+  { label: 'Leave Requests', icon: <FiCalendar />, path: '/leave-requests' },
   { label: 'Salary Details', icon: <FiDollarSign />, path: '/salary' },
   { label: 'Late Reports', icon: <FiClock />, path: '/late-reports' },
   { label: 'Holiday List', icon: <FiCalendar />, path: '/holidays' },

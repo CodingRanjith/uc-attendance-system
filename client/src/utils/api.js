@@ -1,10 +1,10 @@
 // src/utils/api.js
-export const BASE_URL = 'https://uc-attendance-system-1ts2.onrender.com';
+// export const BASE_URL = 'https://uc-attendance-system-1ts2.onrender.com';
 
 // src/utils/api.js
 
 // Base URL
-// export const BASE_URL = 'http://localhost:5000'; // Change to your live domain when needed
+export const BASE_URL = 'http://localhost:5000'; // Change to your live domain when needed
 
 // -----------------
 // Auth & User APIs
@@ -20,6 +20,12 @@ export const API_ENDPOINTS = {
   getCurrentUser: `${BASE_URL}/users/me`,
   // getUserById: (id) => `${BASE_URL}/users/${id}`,
   // getAttendanceByUser: (id) => `${BASE_URL}/attendance/user/${id}`,
+
+
+
+  // Add this to API_ENDPOINTS
+ dailySummary: `${BASE_URL}/api/report/daily-summary`,
+
 
 
   // -----------------
@@ -54,6 +60,9 @@ export const API_ENDPOINTS = {
   getMyLeaves: `${BASE_URL}/api/leaves/me`,
   getAllLeaves: `${BASE_URL}/api/leaves/all`,
   updateLeaveStatus: (id) => `${BASE_URL}/api/leaves/${id}`,
+  deleteLeaveRequest: (id) => `${BASE_URL}/api/leaves/${id}`,
+
+  
 
   // -----------------
   // Holidays

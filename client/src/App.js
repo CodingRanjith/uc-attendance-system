@@ -15,10 +15,12 @@ import Employees from './pages/admin/Employees';
 import Salary from './pages/admin/Salary';
 import Attendance from './pages/admin/Attendance';
 import Reports from './pages/admin/Reports';
+import LeaveRequestsAdmin from './pages/admin/LeaveRequests';
+import DailySummary from './pages/admin/DailySummary';
 
 
 import AttendancePage from './pages/employee/AttendancePage';
-import Leave from './pages/employee/ApplyLeaveForm';
+import Leave from './pages/employee/ApplyAndStatus';
 import EditUser from './components/EditUser';
 import PendingUsers from './pages/admin/PendingUsers';
 import AllUsers from './pages/admin/AllUsers';
@@ -50,6 +52,10 @@ function App() {
           <Route path="/salary" element={<Salary />} />
           <Route path="/attendances" element={<Attendance />} />
           <Route path="/reports" element={<Reports />} />
+          <Route path="/leave-requests" element={<LeaveRequestsAdmin />} />
+          <Route path="/daily-summary" element={<DailySummary />} />
+
+          {/* Admin Specific Pages */}
           <Route path="/pending-users" element={<PendingUsers />} />
           <Route path="/all-users" element={<AllUsers />} />
           <Route path="/holidays" element={<Holidays />} />

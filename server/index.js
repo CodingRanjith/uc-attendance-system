@@ -48,6 +48,77 @@ app.use(cors({ origin: '*' }));
 // Routes
 
 
+app.get('/api/report/daily-summary', authMiddleware, roleMiddleware('admin'), async (req, res) => {
+  try {
+    const { date } = req.query;
+    if (!date) return res.status(400).json({ error: 'Date is required' });
+
+    const selectedDate = new Date(date);
+    const start = new Date(selectedDate.setHours(0, 0, 0, 0));
+    const end = new Date(selectedDate.setHours(23, 59, 59, 999));
+
+    const users = await User.find({});
+    const attendanceRecords = await Attendance.find({
+      timestamp: { $gte: start, $lte: end }
+    }).populate('user', 'name');
+
+    const leaveRecords = await LeaveRequest.find({
+      fromDate: { $lte: end },
+      toDate: { $gte: start }
+    }).populate('user', 'name');
+
+    const report = {
+      date,
+      present: [],
+      absent: [],
+      checkInOut: [],
+      workTypes: [],
+      leaveStatus: [],
+      workTime: []
+    };
+
+    users.forEach(user => {
+      const userAttendance = attendanceRecords.filter(a => a.user._id.equals(user._id));
+      const leave = leaveRecords.find(l => l.user._id.equals(user._id));
+
+      if (userAttendance.length > 0) {
+        // Sort timestamps for proper check-in/out analysis
+        const sorted = userAttendance.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+        const checkIn = sorted[0]?.timestamp;
+        const checkOut = sorted[sorted.length - 1]?.timestamp;
+
+        const diffMinutes = Math.round((new Date(checkOut) - new Date(checkIn)) / 60000);
+
+        report.present.push(user.name);
+        report.checkInOut.push({
+          name: user.name,
+          checkIn: new Date(checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          checkOut: new Date(checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        });
+
+        const location = sorted[0]?.location || 'Office';
+        report.workTypes.push({ name: user.name, type: location });
+
+        report.workTime.push({ name: user.name, minutes: diffMinutes });
+      } else {
+        report.absent.push(user.name);
+      }
+
+      report.leaveStatus.push({
+        name: user.name,
+        status: leave ? 'Leave Applied' : 'Not Applied'
+      });
+    });
+
+    res.json(report);
+  } catch (err) {
+    console.error('Daily Summary Error:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+
+
 app.post('/register', async (req, res) => {
   try {
     const { name, email, password, phone, position, company, schedule } = req.body;
@@ -267,12 +338,11 @@ app.get('/admin/pending-users', authMiddleware, roleMiddleware('admin'), async (
 });
 
 
-// Apply for leave (employee)
 app.post('/api/leaves/apply', authMiddleware, async (req, res) => {
   try {
     const { fromDate, toDate, reason, leaveType } = req.body;
     if (!fromDate || !toDate || !reason) {
-      return res.status(400).json({ error: 'Missing fields' });
+      return res.status(400).json({ error: 'Missing required fields' });
     }
 
     const leave = new LeaveRequest({
@@ -284,17 +354,19 @@ app.post('/api/leaves/apply', authMiddleware, async (req, res) => {
     });
 
     await leave.save();
-    res.status(201).json({ message: 'Leave request submitted' });
+    res.status(201).json({ message: 'Leave request submitted successfully', leave });
   } catch (err) {
     console.error('Leave apply error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// Get all leave requests (admin)
+
 app.get('/api/leaves/all', authMiddleware, roleMiddleware('admin'), async (req, res) => {
   try {
-    const requests = await LeaveRequest.find().populate('user', 'name email');
+    const requests = await LeaveRequest.find()
+      .sort({ createdAt: -1 })
+      .populate('user', 'name email');
     res.json(requests);
   } catch (err) {
     console.error('Fetch leave requests error:', err);
@@ -302,7 +374,7 @@ app.get('/api/leaves/all', authMiddleware, roleMiddleware('admin'), async (req, 
   }
 });
 
-// Update leave request status (admin)
+
 app.patch('/api/leaves/:id', authMiddleware, roleMiddleware('admin'), async (req, res) => {
   try {
     const { status } = req.body;
@@ -314,26 +386,57 @@ app.patch('/api/leaves/:id', authMiddleware, roleMiddleware('admin'), async (req
       req.params.id,
       { status },
       { new: true }
-    );
+    ).populate('user', 'name email');
 
     if (!updated) {
       return res.status(404).json({ error: 'Leave request not found' });
     }
 
-    res.json({ message: `Leave ${status.toLowerCase()}`, request: updated });
+    res.json({
+      message: `Leave ${status.toLowerCase()}`,
+      request: updated
+    });
   } catch (err) {
     console.error('Update leave error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// Get logged-in user's leave requests
+
 app.get('/api/leaves/me', authMiddleware, async (req, res) => {
   try {
-    const leaves = await LeaveRequest.find({ user: req.user._id }).sort({ createdAt: -1 });
-    res.json(leaves);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 5;
+    const skip = (page - 1) * limit;
+
+    const [leaves, total] = await Promise.all([
+      LeaveRequest.find({ user: req.user._id })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      LeaveRequest.countDocuments({ user: req.user._id }),
+    ]);
+
+    res.json({ leaves, total });
   } catch (err) {
     console.error('Fetch my leaves error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
+// DELETE /api/leaves/:id - Admin can delete a leave request
+app.delete('/api/leaves/:id', authMiddleware, roleMiddleware('admin'), async (req, res) => {
+  try {
+    const leave = await LeaveRequest.findByIdAndDelete(req.params.id);
+
+    if (!leave) {
+      return res.status(404).json({ error: 'Leave request not found' });
+    }
+
+    res.json({ message: 'Leave request deleted successfully' });
+  } catch (err) {
+    console.error('Delete leave error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -368,6 +471,7 @@ app.post('/login', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
 
 app.post('/attendance', authMiddleware, upload.single('image'), async (req, res) => {
   const [lat, lon] = req.body.location.split(',').map(parseFloat);
