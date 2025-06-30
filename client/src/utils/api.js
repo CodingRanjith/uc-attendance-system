@@ -1,10 +1,10 @@
 // src/utils/api.js
-// export const BASE_URL = 'https://uc-attendance-system-1ts2.onrender.com';
+export const BASE_URL = 'https://uc-attendance-system-1ts2.onrender.com';
 
 // src/utils/api.js
 
 // Base URL
-export const BASE_URL = 'http://localhost:5000'; // Change to your live domain when needed
+// export const BASE_URL = 'http://localhost:5000'; // Change to your live domain when needed
 
 // -----------------
 // Auth & User APIs
@@ -18,8 +18,8 @@ export const API_ENDPOINTS = {
   updateUser: (userId) => `${BASE_URL}/users/${userId}`,
   updateSalary: (userId) => `${BASE_URL}/users/${userId}/salary`,
   getCurrentUser: `${BASE_URL}/users/me`,
-  getUserById: (id) => `${BASE_URL}/users/${id}`,
-  getAttendanceByUser: (id) => `${BASE_URL}/attendance/user/${id}`,
+  // getUserById: (id) => `${BASE_URL}/users/${id}`,
+  // getAttendanceByUser: (id) => `${BASE_URL}/attendance/user/${id}`,
 
 
   // -----------------

@@ -370,30 +370,41 @@ app.post('/login', async (req, res) => {
 });
 
 app.post('/attendance', authMiddleware, upload.single('image'), async (req, res) => {
-  const userLocation = {
-    lat: parseFloat(req.body.location.split(',')[0]),
-    lon: parseFloat(req.body.location.split(',')[1])
-  };
-  
-  const officeCoords = {
-    lat: officeLocation.latitude,
-    lon: officeLocation.longitude
-  };
-  
-  const distance = haversine(userLocation, officeCoords); // in meters
-  const isInOffice = distance <= officeLocation.radiusMeters;
-  
+  const [lat, lon] = req.body.location.split(',').map(parseFloat);
+  const userLocation = { latitude: lat, longitude: lon };
+
+  let isInOffice = false;
+  let matchedOfficeName = null;
+
+  for (const office of officeLocations) {
+    const officeCoords = { latitude: office.latitude, longitude: office.longitude };
+    const distance = haversine(userLocation, officeCoords); // in meters
+
+    if (distance <= office.radiusMeters) {
+      isInOffice = true;
+      matchedOfficeName = office.name;
+      break;
+    }
+  }
+
   const attendance = new Attendance({
     user: req.user._id,
     type: req.body.type,
     location: req.body.location,
     image: req.file.filename,
     isInOffice,
+    officeName: matchedOfficeName || 'Outside Office',
     timestamp: new Date()
   });
+
   await attendance.save();
-  res.json({ message: 'Attendance marked' });
+  res.json({
+    message: 'Attendance marked',
+    isInOffice,
+    office: matchedOfficeName
+  });
 });
+
 
 app.get('/attendance/all', authMiddleware, roleMiddleware('admin', 'user'), async (req, res) => {
   try {
